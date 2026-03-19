@@ -47,6 +47,7 @@ class AuthRepositoryImpl implements AuthRepository {
         final username = data['username'] as String;
         await LocalStorage.saveToken(token);
         await LocalStorage.saveUsername(username);
+        await LocalStorage.setOnboardingCompleted();
         try {
           final hash = _hashPassword(email, password);
           await _authCacheDao.upsert(AuthCacheEntry(
@@ -76,6 +77,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return AuthResult.failure('Incorrect credentials (offline mode)');
       }
       await LocalStorage.saveUsername(cached.username);
+      await LocalStorage.setOnboardingCompleted();
       if (cached.token != null) {
         await LocalStorage.saveToken(cached.token!);
       }
