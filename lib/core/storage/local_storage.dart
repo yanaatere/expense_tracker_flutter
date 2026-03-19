@@ -5,6 +5,11 @@ class LocalStorage {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   static const _usernameKey = 'username';
+  static const _localeKey = 'locale';
+  static const _onboardingKey = 'onboarding_completed';
+  static const _lastActiveKey = 'last_active_at';
+  static const _appInstalledKey = 'app_installed';
+  static const sessionTimeout = Duration(minutes: 1);
 
   // ── Token (secure storage) ──────────────────────────────────────────────────
 
@@ -27,11 +32,71 @@ class LocalStorage {
     return prefs.getString(_usernameKey);
   }
 
+  // ── Locale (shared prefs) ───────────────────────────────────────────────────
+
+  static Future<void> saveLocale(String langCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_localeKey, langCode);
+  }
+
+  static Future<String?> getLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_localeKey);
+  }
+
+  // ── Onboarding (shared prefs) ────────────────────────────────────────────────
+
+  static Future<void> setOnboardingCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingKey, true);
+  }
+
+  static Future<bool> isOnboardingCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_onboardingKey) ?? false;
+  }
+
+  // ── Fresh install detection ──────────────────────────────────────────────────
+  // SharedPreferences is wiped on reinstall, but iOS Keychain (FlutterSecureStorage)
+  // persists. If app_installed flag is missing, it's a fresh install — clear the
+  // stale Keychain token so the user starts from scratch.
+
+  static Future<void> clearStaleKeychainIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final installed = prefs.getBool(_appInstalledKey) ?? false;
+    if (!installed) {
+      await _storage.deleteAll();
+      await prefs.setBool(_appInstalledKey, true);
+    }
+  }
+
+  // ── Last active (shared prefs) ───────────────────────────────────────────────
+
+  static Future<void> saveLastActiveAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastActiveKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  static Future<bool> isSessionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastActive = prefs.getInt(_lastActiveKey);
+    if (lastActive == null) return false;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - lastActive;
+    return elapsed > sessionTimeout.inMilliseconds;
+  }
+
+  static Future<void> clearLastActiveAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lastActiveKey);
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
 
   static Future<void> clearAll() async {
     await clearToken();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_usernameKey);
+    await prefs.remove(_onboardingKey);
+    await prefs.remove(_lastActiveKey);
   }
 }

@@ -111,6 +111,10 @@ class AuthRepositoryImpl implements AuthRepository {
             syncedAt: DateTime.now().millisecondsSinceEpoch,
           ));
         } catch (_) {}
+        if (data['token'] != null) {
+          await LocalStorage.saveToken(data['token'] as String);
+        }
+        await LocalStorage.saveUsername(username);
         return AuthResult.online(username: username);
       } on DioException catch (e) {
         return AuthResult.failure(AuthService.errorMessage(e));

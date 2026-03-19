@@ -1,0 +1,13 @@
+{
+  "@@locale": "id",
+  "selectLanguage": "Pilih Bahasa",
+  "next": "Selanjutnya",
+  "settingUpWallet": "Pengaturan Dompet",
+  "walletName": "Nama Dompet",
+  "currency": "Mata Uang",
+  "balance": "Saldo",
+  "type": "Tipe",
+  "goals": "Tujuan",
+  "addLater": "Tambah Nanti",
+  "save": "Simpan"
+}

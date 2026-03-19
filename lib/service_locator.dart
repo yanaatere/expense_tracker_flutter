@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import 'core/database/app_database.dart';
 import 'core/database/daos/auth_cache_dao.dart';
 import 'core/database/daos/sync_queue_dao.dart';
 import 'core/repositories/auth_repository.dart';
 import 'core/repositories/auth_repository_impl.dart';
 import 'core/services/api_client.dart';
+import 'core/storage/local_storage.dart';
 import 'core/sync/connectivity_service.dart';
 import 'core/sync/sync_service.dart';
 
@@ -11,9 +13,15 @@ class ServiceLocator {
   static late ConnectivityService connectivity;
   static late SyncService syncService;
   static late AuthRepository authRepository;
+  static late ValueNotifier<Locale> localeNotifier;
 
   static Future<void> setup() async {
+    await LocalStorage.clearStaleKeychainIfNeeded();
+
     final db = await AppDatabase.database;
+
+    final savedLocale = await LocalStorage.getLocale();
+    localeNotifier = ValueNotifier(Locale(savedLocale ?? 'en'));
 
     connectivity = ConnectivityService();
 

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../storage/local_storage.dart';
 
 class ApiClient {
@@ -18,6 +19,19 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
       ),
     );
+
+    if (kDebugMode) {
+      d.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          requestHeader: false,
+          responseHeader: false,
+          error: true,
+          logPrint: (o) => print('[API] $o'),
+        ),
+      );
+    }
 
     d.interceptors.add(
       InterceptorsWrapper(

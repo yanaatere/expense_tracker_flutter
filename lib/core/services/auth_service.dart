@@ -11,10 +11,11 @@ class AuthService {
     required String password,
   }) async {
     final response = await _dio.post(
-      '/auth/register',
+      '/api/auth/register',
       data: {'username': username, 'email': email, 'password': password},
     );
-    return response.data as Map<String, dynamic>;
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
   }
 
   /// POST /auth/login → { token, username }
@@ -23,16 +24,21 @@ class AuthService {
     required String password,
   }) async {
     final response = await _dio.post(
-      '/auth/login',
+      '/api/auth/login',
       data: {'email': email, 'password': password},
     );
-    return response.data as Map<String, dynamic>;
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
   }
 
   /// Extract a readable message from a DioException.
   static String errorMessage(DioException e) {
     final data = e.response?.data;
     if (data is Map) {
+      final inner = data['data'];
+      if (inner is Map) {
+        return (inner['message'] ?? '').toString();
+      }
       return (data['message'] ?? data['error'] ?? '').toString();
     }
     if (e.type == DioExceptionType.connectionTimeout ||

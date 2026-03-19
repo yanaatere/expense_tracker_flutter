@@ -31,8 +31,9 @@ class SyncService {
         );
 
         if (item.operation == 'register') {
-          final data = response.data;
-          if (data is Map<String, dynamic>) {
+          final envelope = response.data;
+          if (envelope is Map<String, dynamic>) {
+            final data = envelope['data'] as Map<String, dynamic>? ?? {};
             final serverId = data['id']?.toString() ?? '';
             final token = data['token'] as String?;
             if (token != null) {

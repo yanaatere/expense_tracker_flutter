@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "selectLanguage": "Select Language",
+  "next": "Next",
+  "settingUpWallet": "Setting up Wallet",
+  "walletName": "Wallet Name",
+  "currency": "Currency",
+  "balance": "Balance",
+  "type": "Type",
+  "goals": "Goals",
+  "addLater": "Add Later",
+  "save": "Save"
+}
