@@ -7,6 +7,8 @@ import 'core/storage/local_storage.dart';
 import 'features/auth/create_account_screen.dart';
 import 'features/onboarding/select_language_screen.dart';
 import 'features/onboarding/setup_wallet_screen.dart';
+import 'features/transactions/add_transaction_screen.dart';
+import 'features/wallet/wallet_screen.dart';
 import 'service_locator.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/home/home_screen.dart';
@@ -99,9 +101,8 @@ final _router = GoRouter(
 
     final onboardingDone = await LocalStorage.isOnboardingCompleted();
     if (!onboardingDone && !isOnboarding) return '/onboarding/language';
-    if (onboardingDone && !isOnboarding && loc != '/' && loc != '/home' && !isAuthScreen) {
-      return '/home';
-    }
+    // Redirect auth / welcome screens to home when already authenticated
+    if (onboardingDone && (isAuthScreen || loc == '/')) return '/home';
     return null;
   },
   routes: [
@@ -127,7 +128,21 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/onboarding/wallet',
-      builder: (context, state) => const SetupWalletScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, String?>?;
+        return SetupWalletScreen(
+          returnRoute: extra?['returnRoute'] ?? '/home',
+          initialType: extra?['initialType'] ?? 'Bank',
+        );
+      },
+    ),
+    GoRoute(
+      path: '/wallet',
+      builder: (context, state) => const WalletScreen(),
+    ),
+    GoRoute(
+      path: '/add-transaction',
+      builder: (context, state) => const AddTransactionScreen(),
     ),
   ],
 );

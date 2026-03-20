@@ -3,26 +3,41 @@ import '../../l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/constants/wallet_definitions.dart';
 import '../../core/services/wallet_service.dart';
 import '../../core/storage/local_storage.dart';
 import '../../shared/widgets/primary_button.dart';
 
 class SetupWalletScreen extends StatefulWidget {
-  const SetupWalletScreen({super.key});
+  /// Where to navigate after saving. Defaults to '/home'.
+  final String returnRoute;
+
+  /// Pre-selects the wallet type on open. Defaults to 'Bank'.
+  final String initialType;
+
+  const SetupWalletScreen({
+    super.key,
+    this.returnRoute = '/home',
+    this.initialType = 'Bank',
+  });
 
   @override
   State<SetupWalletScreen> createState() => _SetupWalletScreenState();
 }
 
 class _SetupWalletScreenState extends State<SetupWalletScreen> {
-  final _nameController = TextEditingController();
+  final _customNameController = TextEditingController();
   final _balanceController = TextEditingController();
   final _goalsController = TextEditingController();
 
   String _currency = 'IDR';
-  String _type = 'Bank';
+  late String _type;
   bool _loading = false;
   String? _error;
+
+  List<WalletOption> _walletOptions = [];
+  String? _selectedWalletName;
+  bool _isCustomName = false; // true when "Other Bank"/"Other" or Cash selected
 
   static const _currencies = [
     {'code': 'IDR', 'label': 'Indonesian Rupiah (Rp)'},
@@ -30,21 +45,26 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
     {'code': 'EUR', 'label': 'Euro (€)'},
   ];
 
-  static const _types = ['Bank', 'E-Wallet', 'Cash'];
+  static const _types = ['Bank', 'Credit', 'E-Wallet', 'Cash'];
 
-  String get _walletNamePreview =>
-      _nameController.text.isEmpty ? 'Wallet' : _nameController.text;
+  bool get _showDropdown => _walletOptions.isNotEmpty && !_isCustomName;
+
+  String get _cardName {
+    if (_isCustomName) {
+      return _customNameController.text.isEmpty ? 'Wallet' : _customNameController.text;
+    }
+    if (_selectedWalletName != null && !WalletDefinitions.otherValues.contains(_selectedWalletName)) {
+      return _selectedWalletName!;
+    }
+    return 'Wallet';
+  }
 
   String get _balancePreview {
     final raw = _balanceController.text.isEmpty ? '0' : _balanceController.text;
     final amount = double.tryParse(raw) ?? 0;
-    if (_currency == 'IDR') {
-      return 'Rp. ${_formatAmount(amount)}';
-    } else if (_currency == 'USD') {
-      return '\$ ${_formatAmount(amount)}';
-    } else {
-      return '€ ${_formatAmount(amount)}';
-    }
+    if (_currency == 'IDR') return 'Rp. ${_formatAmount(amount)}';
+    if (_currency == 'USD') return '\$ ${_formatAmount(amount)}';
+    return '€ ${_formatAmount(amount)}';
   }
 
   String _formatAmount(double amount) {
@@ -57,6 +77,50 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
     return amount.toString();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType;
+    // Initialize directly — no setState here so first build is already correct
+    final options = WalletDefinitions.optionsFor(_type);
+    _walletOptions = options;
+    _selectedWalletName = options.isNotEmpty ? options.first.name : null;
+    _isCustomName = options.isEmpty;
+  }
+
+  void _applyType(String type) {
+    final options = WalletDefinitions.optionsFor(type);
+    setState(() {
+      _walletOptions = options;
+      _selectedWalletName = options.isNotEmpty ? options.first.name : null;
+      _isCustomName = options.isEmpty;
+      _customNameController.clear();
+    });
+  }
+
+  void _onTypeChanged(String? newType) {
+    if (newType == null) return;
+    setState(() => _type = newType);
+    _applyType(newType);
+  }
+
+  void _onWalletNameSelected(String? name) {
+    if (name == null) return;
+    final isOther = WalletDefinitions.otherValues.contains(name);
+    setState(() {
+      _selectedWalletName = name;
+      _isCustomName = isOther;
+      if (!isOther) _customNameController.clear();
+    });
+  }
+
+  String get _effectiveName {
+    if (_isCustomName) {
+      return _customNameController.text.isEmpty ? 'My Wallet' : _customNameController.text;
+    }
+    return _selectedWalletName ?? 'My Wallet';
+  }
+
   Future<void> _save() async {
     setState(() {
       _loading = true;
@@ -64,14 +128,14 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
     });
     try {
       await WalletService.createWallet(
-        name: _nameController.text.isEmpty ? 'My Wallet' : _nameController.text,
+        name: _effectiveName,
         type: _type,
         currency: _currency,
         balance: double.tryParse(_balanceController.text) ?? 0,
         goals: _goalsController.text,
       );
       await LocalStorage.setOnboardingCompleted();
-      if (mounted) context.go('/home');
+      if (mounted) context.go(widget.returnRoute);
     } on Exception catch (e) {
       setState(() {
         _error = e.toString();
@@ -82,12 +146,12 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
 
   Future<void> _addLater() async {
     await LocalStorage.setOnboardingCompleted();
-    if (mounted) context.go('/home');
+    if (mounted) context.go(widget.returnRoute);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _customNameController.dispose();
     _balanceController.dispose();
     _goalsController.dispose();
     super.dispose();
@@ -97,7 +161,12 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/home');
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -111,19 +180,71 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
 
               // Wallet card preview
               _WalletCardPreview(
-                name: _walletNamePreview,
+                name: _cardName,
                 balance: _balancePreview,
               ),
               const SizedBox(height: 32),
 
+              // Type + Goals row
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _FieldLabel(l10n.type),
+                        const SizedBox(height: 8),
+                        _Dropdown<String>(
+                          value: _type,
+                          items: _types
+                              .map((t) => DropdownMenuItem<String>(
+                                    value: t,
+                                    child: Text(t),
+                                  ))
+                              .toList(),
+                          onChanged: _onTypeChanged,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _FieldLabel(l10n.goals),
+                        const SizedBox(height: 8),
+                        _TextField(
+                          controller: _goalsController,
+                          hintText: 'e.g., Savings, Invest',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
               // Wallet Name
               _FieldLabel(l10n.walletName),
               const SizedBox(height: 8),
-              _TextField(
-                controller: _nameController,
-                onChanged: (_) => setState(() {}),
-                hintText: 'e.g. Mandiri',
-              ),
+              if (_showDropdown)
+                _Dropdown<String>(
+                  value: _selectedWalletName ?? _walletOptions.first.name,
+                  items: _walletOptions
+                      .map((o) => DropdownMenuItem<String>(
+                            value: o.name,
+                            child: Text(o.name),
+                          ))
+                      .toList(),
+                  onChanged: _onWalletNameSelected,
+                )
+              else
+                _TextField(
+                  controller: _customNameController,
+                  onChanged: (_) => setState(() {}),
+                  hintText: _type == 'Cash' ? 'e.g. Cash on Hand' : 'Enter wallet name',
+                ),
               const SizedBox(height: 20),
 
               // Currency
@@ -147,32 +268,8 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
               _TextField(
                 controller: _balanceController,
                 onChanged: (_) => setState(() {}),
-                hintText: '0',
+                hintText: 'Initial Balance',
                 keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 20),
-
-              // Type
-              _FieldLabel(l10n.type),
-              const SizedBox(height: 8),
-              _Dropdown<String>(
-                value: _type,
-                items: _types
-                    .map((t) => DropdownMenuItem<String>(
-                          value: t,
-                          child: Text(t),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _type = v ?? _type),
-              ),
-              const SizedBox(height: 20),
-
-              // Goals
-              _FieldLabel(l10n.goals),
-              const SizedBox(height: 8),
-              _TextField(
-                controller: _goalsController,
-                hintText: 'e.g. Save for holiday',
               ),
               const SizedBox(height: 16),
 
@@ -204,6 +301,7 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }
@@ -242,18 +340,19 @@ class _WalletCardPreview extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Image.asset(
+                'assets/icons/wallet.png',
+                width: 32,
+                height: 32,
+                color: Colors.white,
+              ),
               Text(
                 name,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF1A237E),
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              const Icon(
-                Icons.account_balance_wallet,
-                color: Colors.white,
-                size: 32,
               ),
             ],
           ),
@@ -350,10 +449,7 @@ class _Dropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      items: items,
-      onChanged: onChanged,
+    return InputDecorator(
       decoration: InputDecoration(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -367,7 +463,15 @@ class _Dropdown<T> extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: const Color(0xFF7B5EA7), width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      child: DropdownButton<T>(
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        isExpanded: true,
+        underline: const SizedBox(),
+        isDense: true,
       ),
     );
   }

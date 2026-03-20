@@ -28,7 +28,7 @@ class ApiClient {
           requestHeader: false,
           responseHeader: false,
           error: true,
-          logPrint: (o) => print('[API] $o'),
+          logPrint: (o) => debugPrint('[API] $o'),
         ),
       );
     }

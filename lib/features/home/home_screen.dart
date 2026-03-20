@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -393,7 +394,7 @@ class _QuickActions extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(child: _ActionButton(icon: Icons.sync, label: 'Recurring', onTap: () {})),
         const SizedBox(width: 8),
-        Expanded(child: _ActionButton(icon: Icons.account_balance_wallet, label: 'Wallet', onTap: () {})),
+        Expanded(child: _ActionButton(icon: Icons.account_balance_wallet, label: 'Wallet', onTap: () => context.push('/wallet'))),
       ],
     );
   }
@@ -648,7 +649,7 @@ class _GlassBottomNav extends StatelessWidget {
 
                 // FAB
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () => context.push('/add-transaction'),
                   child: Container(
                     width: 58,
                     height: 58,

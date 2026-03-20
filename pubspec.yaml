@@ -34,3 +34,4 @@ flutter:
   assets:
     - assets/images/background.webp
     - assets/icons/
+    - assets/icons/wallets/

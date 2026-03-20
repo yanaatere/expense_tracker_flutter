@@ -17,13 +17,21 @@ class WalletService {
       data: {
         'name': name,
         'type': type,
-        if (currency != null) 'currency': currency,
-        if (balance != null) 'balance': balance,
+        'currency': currency,
+        'balance': balance,
         if (goals != null && goals.isNotEmpty) 'goals': goals,
       },
     );
     final envelope = response.data as Map<String, dynamic>;
     return envelope['data'] as Map<String, dynamic>;
+  }
+
+  /// GET /api/wallets → list of user wallets
+  static Future<List<Map<String, dynamic>>> getWallets() async {
+    final response = await _dio.get('/api/wallets');
+    final envelope = response.data as Map<String, dynamic>;
+    final data = envelope['data'] as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
   }
 
   static String errorMessage(DioException e) {

@@ -51,7 +51,7 @@ class _SelectLanguageScreenState extends State<SelectLanguageScreen> {
               Text(l10n.selectLanguage, style: AppTextStyles.heading),
               const SizedBox(height: 32),
               DropdownButtonFormField<String>(
-                value: _selectedCode,
+                initialValue: _selectedCode,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),

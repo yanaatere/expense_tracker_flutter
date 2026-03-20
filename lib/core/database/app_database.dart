@@ -13,8 +13,9 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'monex.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -62,5 +63,31 @@ class AppDatabase {
         sync_status  TEXT NOT NULL DEFAULT 'local'
       )
     ''');
+
+    await _createWalletsTable(db);
+  }
+
+  static Future<void> _createWalletsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE wallets (
+        id          TEXT PRIMARY KEY,
+        server_id   TEXT,
+        user_id     TEXT NOT NULL,
+        name        TEXT NOT NULL,
+        type        TEXT NOT NULL,
+        currency    TEXT NOT NULL DEFAULT 'IDR',
+        balance     REAL NOT NULL DEFAULT 0,
+        goals       TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'local',
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createWalletsTable(db);
+    }
   }
 }
