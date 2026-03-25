@@ -22,6 +22,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   crypto: ^3.0.3
   adaptive_platform_ui: ^0.1.103
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

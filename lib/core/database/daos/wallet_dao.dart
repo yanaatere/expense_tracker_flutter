@@ -41,6 +41,19 @@ class WalletDao {
     await batch.commit(noResult: true);
   }
 
+  Future<List<Wallet>> getUnsynced(String userId) async {
+    final rows = await _db.query(
+      'wallets',
+      where: 'user_id = ? AND sync_status = ?',
+      whereArgs: [userId, 'local'],
+    );
+    return rows.map(Wallet.fromMap).toList();
+  }
+
+  Future<void> delete(String id) async {
+    await _db.delete('wallets', where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<void> updateSyncStatus(String id, String serverId, String syncStatus) async {
     await _db.update(
       'wallets',

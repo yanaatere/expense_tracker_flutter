@@ -209,6 +209,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               _WalletTypeRow(
                                 wallets: entry.value,
                                 onAddWallet: () => _navigateToAdd(type: entry.key),
+                                onWalletChanged: _load,
                               ),
                               const SizedBox(height: 8),
                             ],
@@ -223,10 +224,13 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  void _navigateToAdd({String type = 'Bank'}) => context.push(
-        '/onboarding/wallet',
-        extra: <String, String>{'returnRoute': '/wallet', 'initialType': type},
-      );
+  Future<void> _navigateToAdd({String type = 'Bank'}) async {
+    await context.push(
+      '/onboarding/wallet',
+      extra: <String, String>{'returnRoute': '/wallet', 'initialType': type},
+    );
+    _load();
+  }
 }
 
 // ── Section header ────────────────────────────────────────────────────────────
@@ -256,8 +260,13 @@ class _SectionHeader extends StatelessWidget {
 class _WalletTypeRow extends StatefulWidget {
   final List<Wallet> wallets;
   final VoidCallback onAddWallet;
+  final VoidCallback onWalletChanged;
 
-  const _WalletTypeRow({required this.wallets, required this.onAddWallet});
+  const _WalletTypeRow({
+    required this.wallets,
+    required this.onAddWallet,
+    required this.onWalletChanged,
+  });
 
   @override
   State<_WalletTypeRow> createState() => _WalletTypeRowState();
@@ -300,6 +309,7 @@ class _WalletTypeRowState extends State<_WalletTypeRow> {
             return _WalletCard(
               wallet: widget.wallets[index],
               isActive: index == _page,
+              onWalletChanged: widget.onWalletChanged,
             );
           }
           return _AddWalletCard(onTap: widget.onAddWallet);
@@ -314,15 +324,25 @@ class _WalletTypeRowState extends State<_WalletTypeRow> {
 class _WalletCard extends StatelessWidget {
   final Wallet wallet;
   final bool isActive;
+  final VoidCallback onWalletChanged;
 
-  const _WalletCard({required this.wallet, required this.isActive});
+  const _WalletCard({
+    required this.wallet,
+    required this.isActive,
+    required this.onWalletChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final gradient = _gradientForType(wallet.type);
     final usdText = _formatUsd(wallet.balance, wallet.currency);
 
-    return AnimatedContainer(
+    return GestureDetector(
+      onTap: () async {
+        await context.push('/wallet/detail', extra: wallet);
+        onWalletChanged();
+      },
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
       margin: EdgeInsets.only(
@@ -393,6 +413,7 @@ class _WalletCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

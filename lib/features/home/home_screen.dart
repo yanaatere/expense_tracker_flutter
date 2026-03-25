@@ -7,10 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/services/transaction_service.dart';
 import '../../core/storage/local_storage.dart';
 
 // ---------------------------------------------------------------------------
-// Mock data model
+// Transaction model (mapped from API)
 // ---------------------------------------------------------------------------
 
 class _Transaction {
@@ -20,16 +21,30 @@ class _Transaction {
   final DateTime date;
 
   const _Transaction(this.title, this.category, this.amount, this.date);
-}
 
-final _transactions = [
-  _Transaction('Subscription', 'Expenses',  -1000, DateTime(2026, 2, 27)),
-  _Transaction('Donation',     'Charity',    -100, DateTime(2026, 2, 27)),
-  _Transaction('Salary',       'Income',    10000, DateTime(2026, 2, 27)),
-  _Transaction('Flight',       'Travel',     -400, DateTime(2026, 2, 27)),
-  _Transaction('Business',     'Business',    390, DateTime(2026, 2, 27)),
-  _Transaction('Internet',     'Internet',    -90, DateTime(2026, 2, 27)),
-];
+  factory _Transaction.fromApi(Map<String, dynamic> map) {
+    final type = map['type'] as String? ?? 'expense';
+    final raw = map['amount'];
+    double amount = raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
+    if (type == 'expense') amount = -amount.abs();
+
+    final categoryName = map['category_name'] as String? ?? '';
+    final dateStr = map['transaction_date'] as String? ?? '';
+    DateTime date;
+    try {
+      date = DateTime.parse(dateStr);
+    } catch (_) {
+      date = DateTime.now();
+    }
+
+    return _Transaction(
+      map['description'] as String? ?? '',
+      categoryName,
+      amount,
+      date,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -47,6 +62,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isScrolled = false;
   late final ScrollController _scrollController;
 
+  List<_Transaction> _transactions = [];
+  bool _loadingTransactions = true;
+  String? _transactionError;
+
   @override
   void initState() {
     super.initState();
@@ -56,11 +75,29 @@ class _HomeScreenState extends State<HomeScreen> {
       if (scrolled != _isScrolled) setState(() => _isScrolled = scrolled);
     });
     _loadUser();
+    _loadTransactions();
   }
 
   Future<void> _loadUser() async {
     final username = await LocalStorage.getUsername();
     if (mounted) setState(() => _username = username ?? 'User');
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      final data = await TransactionService.getRecentTransactions(limit: 10);
+      if (!mounted) return;
+      setState(() {
+        _transactions = data.map(_Transaction.fromApi).toList();
+        _loadingTransactions = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _transactionError = 'Failed to load transactions';
+        _loadingTransactions = false;
+      });
+    }
   }
 
   @override
@@ -81,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       extendBody: true,
-      bottomNavigationBar: const _GlassBottomNav(),
+      bottomNavigationBar: _GlassBottomNav(onAddTransaction: _loadTransactions),
       body: CustomScrollView(
         controller: _scrollController,
         slivers: [
@@ -129,7 +166,11 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-              child: _RecentTransactionSection(transactions: _transactions),
+              child: _RecentTransactionSection(
+                transactions: _transactions,
+                isLoading: _loadingTransactions,
+                error: _transactionError,
+              ),
             ),
           ),
 
@@ -448,7 +489,13 @@ class _ActionButton extends StatelessWidget {
 
 class _RecentTransactionSection extends StatelessWidget {
   final List<_Transaction> transactions;
-  const _RecentTransactionSection({required this.transactions});
+  final bool isLoading;
+  final String? error;
+  const _RecentTransactionSection({
+    required this.transactions,
+    this.isLoading = false,
+    this.error,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -503,21 +550,57 @@ class _RecentTransactionSection extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            children: [
-              for (int i = 0; i < transactions.length; i++) ...[
-                _TransactionRow(transaction: transactions[i]),
-                if (i < transactions.length - 1)
-                  Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    indent: 64,
-                    endIndent: 16,
-                    color: AppColors.inputBorder.withAlpha(180),
+          child: isLoading
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
                   ),
-              ],
-            ],
-          ),
+                )
+              : error != null
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      child: Center(
+                        child: Text(
+                          error!,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.placeholderText,
+                          ),
+                        ),
+                      ),
+                    )
+                  : transactions.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          child: Center(
+                            child: Text(
+                              'No transactions yet',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppColors.placeholderText,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (int i = 0; i < transactions.length; i++) ...[
+                              _TransactionRow(transaction: transactions[i]),
+                              if (i < transactions.length - 1)
+                                Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  indent: 64,
+                                  endIndent: 16,
+                                  color: AppColors.inputBorder.withAlpha(180),
+                                ),
+                            ],
+                          ],
+                        ),
         ),
       ],
     );
@@ -543,9 +626,8 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = transaction.amount > 0;
     final amt = transaction.amount.abs();
-    // Format with comma separator: 1000 → 1,000
     final formatted = NumberFormat('#,##0', 'en_US').format(amt);
-    final amountStr = isIncome ? '+\$$formatted' : '-\$$formatted';
+    final amountStr = isIncome ? '+Rp. $formatted' : '-Rp. $formatted';
     final dateStr = DateFormat('d MMMM yyyy').format(transaction.date);
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
 
@@ -608,7 +690,8 @@ class _TransactionRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _GlassBottomNav extends StatelessWidget {
-  const _GlassBottomNav();
+  final VoidCallback? onAddTransaction;
+  const _GlassBottomNav({this.onAddTransaction});
 
   @override
   Widget build(BuildContext context) {
@@ -649,7 +732,10 @@ class _GlassBottomNav extends StatelessWidget {
 
                 // FAB
                 GestureDetector(
-                  onTap: () => context.push('/add-transaction'),
+                  onTap: () async {
+                    await context.push('/add-transaction');
+                    onAddTransaction?.call();
+                  },
                   child: Container(
                     width: 58,
                     height: 58,

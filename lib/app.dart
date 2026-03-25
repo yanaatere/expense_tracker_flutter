@@ -3,12 +3,16 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'core/constants/app_colors.dart';
+import 'core/models/wallet.dart';
 import 'core/storage/local_storage.dart';
 import 'features/auth/create_account_screen.dart';
 import 'features/onboarding/select_language_screen.dart';
 import 'features/onboarding/setup_wallet_screen.dart';
 import 'features/transactions/add_transaction_screen.dart';
 import 'features/wallet/wallet_screen.dart';
+import 'features/wallet/wallet_detail_screen.dart';
+import 'features/wallet/wallet_edit_screen.dart';
+import 'features/wallet/wallet_info_screen.dart';
 import 'service_locator.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/home/home_screen.dart';
@@ -139,6 +143,27 @@ final _router = GoRouter(
     GoRoute(
       path: '/wallet',
       builder: (context, state) => const WalletScreen(),
+    ),
+    GoRoute(
+      path: '/wallet/detail',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletDetailScreen(wallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/wallet/edit',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletEditScreen(wallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/wallet/info',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletInfoScreen(wallet: wallet);
+      },
     ),
     GoRoute(
       path: '/add-transaction',

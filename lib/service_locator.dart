@@ -29,21 +29,27 @@ class ServiceLocator {
 
     connectivity = ConnectivityService();
 
+    final syncQueueDao = SyncQueueDao(db);
+    final walletDao = WalletDao(db);
+    final authCacheDao = AuthCacheDao(db);
+
     syncService = SyncService(
-      syncQueueDao: SyncQueueDao(db),
-      authCacheDao: AuthCacheDao(db),
+      syncQueueDao: syncQueueDao,
+      authCacheDao: authCacheDao,
+      walletDao: walletDao,
       dio: ApiClient.dio,
     );
 
     authRepository = AuthRepositoryImpl(
-      authCacheDao: AuthCacheDao(db),
-      syncQueueDao: SyncQueueDao(db),
+      authCacheDao: authCacheDao,
+      syncQueueDao: syncQueueDao,
       connectivity: connectivity,
     );
 
     walletRepository = WalletRepositoryImpl(
-      walletDao: WalletDao(db),
-      authCacheDao: AuthCacheDao(db),
+      walletDao: walletDao,
+      authCacheDao: authCacheDao,
+      syncQueueDao: syncQueueDao,
       connectivity: connectivity,
     );
 

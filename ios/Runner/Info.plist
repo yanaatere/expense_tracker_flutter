@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Monex to access your photo library to attach receipts to transactions.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Monex to use your camera to capture receipts.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
