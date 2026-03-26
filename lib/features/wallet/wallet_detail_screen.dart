@@ -8,56 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-List<Color> _gradientForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return [const Color(0xFF96FBC4), const Color(0xFF74EBD5), const Color(0xFF9FACE6)];
-    case 'E-Wallet':
-      return [const Color(0xFF667EEA), const Color(0xFF764BA2), const Color(0xFF89F7FE)];
-    case 'Cash':
-      return [const Color(0xFF84FAB0), const Color(0xFF8FD3F4), const Color(0xFFE0C3FC)];
-    default:
-      return [const Color(0xFFA18CD1), const Color(0xFFFBC2EB), const Color(0xFFFFD6A5)];
-  }
-}
-
-String _iconForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return 'assets/icons/wallets/bank.png';
-    case 'E-Wallet':
-      return 'assets/icons/wallets/ewallet.png';
-    case 'Cash':
-      return 'assets/icons/wallets/money.png';
-    default:
-      return 'assets/icons/wallets/creditcard.png';
-  }
-}
-
-double _toUsd(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return amount / 15500;
-    case 'EUR':
-      return amount * 1.08;
-    default:
-      return amount;
-  }
-}
-
-String _formatBalance(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return 'Rp. ${NumberFormat('#,##0', 'en_US').format(amount)}';
-    case 'EUR':
-      return '€ ${NumberFormat('#,##0.##').format(amount)}';
-    default:
-      return '\$ ${NumberFormat('#,##0.##').format(amount)}';
-  }
-}
+import '../../shared/widgets/wallet_card.dart';
 
 String _typeLabel(String type) {
   switch (type) {
@@ -130,9 +81,6 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final wallet = _wallet;
-    final gradient = _gradientForType(wallet.type);
-    final usdAmount = _toUsd(wallet.balance, wallet.currency);
-    final usdText = '/ USD ${NumberFormat('#,##0.##').format(usdAmount)}';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -172,67 +120,11 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Gradient wallet card ─────────────────────────────────
-                    Container(
-                      height: 170,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: gradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: gradient.first.withAlpha(120),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Image.asset(
-                                _iconForType(wallet.type),
-                                width: 28,
-                                height: 28,
-                                color: Colors.white,
-                              ),
-                              Text(
-                                wallet.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            _formatBalance(wallet.balance, wallet.currency),
-                            style: GoogleFonts.inter(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            usdText,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white.withAlpha(180),
-                            ),
-                          ),
-                        ],
-                      ),
+                    // ── Wallet card ──────────────────────────────────────────
+                    WalletCardWidget(
+                      wallet: wallet,
+                      width: 310,
+                      height: 230,
                     ),
 
                     const SizedBox(height: 28),

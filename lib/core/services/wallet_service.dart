@@ -58,6 +58,7 @@ class WalletService {
     required String currency,
     required double balance,
     String? goals,
+    String? backdropImage,
   }) async {
     final response = await _dio.put(
       '/api/wallets/$walletId',
@@ -67,6 +68,7 @@ class WalletService {
         'currency': currency,
         'balance': balance,
         'goals': goals ?? '',
+        'backdrop_image': backdropImage,
       },
     );
     final envelope = response.data as Map<String, dynamic>;

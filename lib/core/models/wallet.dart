@@ -9,6 +9,7 @@ class Wallet {
   final String currency; // 'IDR', 'USD', 'EUR'
   final double balance;
   final String? goals;
+  final String? backdropImage;
   final String syncStatus; // 'local', 'synced', 'pending'
   final int createdAt;
   final int updatedAt;
@@ -22,6 +23,7 @@ class Wallet {
     required this.currency,
     required this.balance,
     this.goals,
+    this.backdropImage,
     required this.syncStatus,
     required this.createdAt,
     required this.updatedAt,
@@ -59,6 +61,7 @@ class Wallet {
         'currency': currency,
         'balance': balance,
         'goals': goals,
+        'backdrop_image': backdropImage,
         'sync_status': syncStatus,
         'created_at': createdAt,
         'updated_at': updatedAt,
@@ -73,6 +76,7 @@ class Wallet {
         currency: map['currency'] as String? ?? 'IDR',
         balance: (map['balance'] as num?)?.toDouble() ?? 0.0,
         goals: map['goals'] as String?,
+        backdropImage: map['backdrop_image'] as String?,
         syncStatus: map['sync_status'] as String? ?? 'local',
         createdAt: map['created_at'] as int,
         updatedAt: map['updated_at'] as int,
@@ -94,6 +98,7 @@ class Wallet {
     String? currency,
     double? balance,
     String? goals,
+    Object? backdropImage = _sentinel,
   }) =>
       Wallet(
         id: id,
@@ -104,8 +109,13 @@ class Wallet {
         currency: currency ?? this.currency,
         balance: balance ?? this.balance,
         goals: goals ?? this.goals,
+        backdropImage: backdropImage == _sentinel
+            ? this.backdropImage
+            : backdropImage as String?,
         syncStatus: syncStatus ?? this.syncStatus,
         createdAt: createdAt,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
+
+  static const Object _sentinel = Object();
 }

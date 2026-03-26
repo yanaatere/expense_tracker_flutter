@@ -23,6 +23,7 @@ dependencies:
   crypto: ^3.0.3
   adaptive_platform_ui: ^0.1.103
   image_picker: ^1.1.2
+  syncfusion_flutter_charts: ^28.2.3
 
 dev_dependencies:
   flutter_test:
@@ -34,5 +35,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/background.webp
+    - assets/images/backdrop_wallets/
     - assets/icons/
     - assets/icons/wallets/
+    - assets/icons/wallets/wallet_transaction/

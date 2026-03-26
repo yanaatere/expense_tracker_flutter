@@ -7,8 +7,10 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
+import '../../core/utils/currency_formatter.dart';
 
-// ── Shared helpers (mirrored from wallet_screen.dart) ─────────────────────────
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 List<Color> _gradientForType(String type) {
   switch (type) {
@@ -44,17 +46,6 @@ double _toUsd(double amount, String currency) {
       return amount * 1.08;
     default:
       return amount;
-  }
-}
-
-String _formatBalance(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return 'Rp. ${NumberFormat('#,##0', 'en_US').format(amount)}';
-    case 'EUR':
-      return '€ ${NumberFormat('#,##0.##').format(amount)}';
-    default:
-      return '\$ ${NumberFormat('#,##0.##').format(amount)}';
   }
 }
 
@@ -241,7 +232,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      _formatBalance(wallet.balance, wallet.currency),
+                      formatCurrency(wallet.balance, wallet.currency),
                       style: GoogleFonts.inter(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,

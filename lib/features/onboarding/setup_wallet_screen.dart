@@ -341,7 +341,7 @@ class _WalletCardPreview extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Image.asset(
-                'assets/icons/wallet.png',
+                'assets/icons/wallets/wallet.png',
                 width: 32,
                 height: 32,
                 color: Colors.white,

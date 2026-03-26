@@ -1,64 +1,16 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/wallet_definitions.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
-
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
-List<Color> _gradientForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return [const Color(0xFF96FBC4), const Color(0xFF74EBD5), const Color(0xFF9FACE6)];
-    case 'E-Wallet':
-      return [const Color(0xFF667EEA), const Color(0xFF764BA2), const Color(0xFF89F7FE)];
-    case 'Cash':
-      return [const Color(0xFF84FAB0), const Color(0xFF8FD3F4), const Color(0xFFE0C3FC)];
-    default:
-      return [const Color(0xFFA18CD1), const Color(0xFFFBC2EB), const Color(0xFFFFD6A5)];
-  }
-}
-
-String _iconForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return 'assets/icons/wallets/bank.png';
-    case 'E-Wallet':
-      return 'assets/icons/wallets/ewallet.png';
-    case 'Cash':
-      return 'assets/icons/wallets/money.png';
-    default:
-      return 'assets/icons/wallets/creditcard.png';
-  }
-}
-
-double _toUsd(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return amount / 15500;
-    case 'EUR':
-      return amount * 1.08;
-    default:
-      return amount;
-  }
-}
-
-String _formatBalance(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return 'Rp. ${NumberFormat('#,##0', 'en_US').format(amount)}';
-    case 'EUR':
-      return '€ ${NumberFormat('#,##0.##').format(amount)}';
-    default:
-      return '\$ ${NumberFormat('#,##0.##').format(amount)}';
-  }
-}
+import '../../shared/widgets/wallet_card.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -81,8 +33,23 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
   String? _selectedWalletName;
   bool _isCustomName = false;
 
+  String? _backdropImage;
+
   bool _loading = false;
   String? _error;
+
+  static const _backdropAssets = [
+    'assets/images/backdrop_wallets/Card 1.webp',
+    'assets/images/backdrop_wallets/Card 2.webp',
+    'assets/images/backdrop_wallets/Card 3.webp',
+    'assets/images/backdrop_wallets/Card 4.webp',
+    'assets/images/backdrop_wallets/Card 5.webp',
+    'assets/images/backdrop_wallets/Card 6.webp',
+    'assets/images/backdrop_wallets/Card 7.webp',
+    'assets/images/backdrop_wallets/Card 8.webp',
+    'assets/images/backdrop_wallets/Card 9.webp',
+    'assets/images/backdrop_wallets/Card 10.webp',
+  ];
 
   static const _types = ['Bank', 'Credit', 'E-Wallet', 'Cash'];
   static const _currencies = [
@@ -115,6 +82,9 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
           ? w.balance.toInt().toString()
           : w.balance.toString(),
     );
+
+    _backdropImage = widget.wallet.backdropImage ??
+        _backdropAssets[Random().nextInt(_backdropAssets.length)];
 
     // Set up wallet name state
     final options = WalletDefinitions.optionsFor(_type);
@@ -161,6 +131,109 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
     });
   }
 
+  void _onCustomizeCard() {
+    String? pending = _backdropImage;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (_, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Choose Card Background',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.labelText,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _backdropAssets.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.6,
+                    ),
+                    itemBuilder: (_, i) {
+                      final asset = _backdropAssets[i];
+                      final isSelected = pending == asset;
+                      return GestureDetector(
+                        onTap: () => setSheetState(() => pending = asset),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            image: DecorationImage(
+                              image: AssetImage(asset),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _backdropImage = pending);
+                      Navigator.of(sheetCtx).pop();
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _save() async {
     final name = _effectiveName.trim();
     if (name.isEmpty) {
@@ -183,6 +256,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
         goals: _goalsController.text.trim().isEmpty
             ? null
             : _goalsController.text.trim(),
+        backdropImage: _backdropImage,
       );
 
       if (!mounted) return;
@@ -199,9 +273,6 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final gradient = _gradientForType(_type);
-    final usdAmount = _toUsd(_previewBalance, _currency);
-    final usdText = '/ USD ${NumberFormat('#,##0.##').format(usdAmount)}';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -242,68 +313,15 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Live wallet card preview ──────────────────────────────
-                    Container(
-                      height: 170,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: gradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: gradient.first.withAlpha(120),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Image.asset(
-                                _iconForType(_type),
-                                width: 28,
-                                height: 28,
-                                color: Colors.white,
-                              ),
-                              Text(
-                                _effectiveName.isEmpty
-                                    ? widget.wallet.name
-                                    : _effectiveName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            _formatBalance(_previewBalance, _currency),
-                            style: GoogleFonts.inter(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            usdText,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white.withAlpha(180),
-                            ),
-                          ),
-                        ],
-                      ),
+                    WalletCardWidget(
+                      wallet: widget.wallet,
+                      typeOverride: _type,
+                      nameOverride: _effectiveName.isEmpty
+                          ? widget.wallet.name
+                          : _effectiveName,
+                      balanceOverride: _previewBalance,
+                      currencyOverride: _currency,
+                      backdropOverride: _backdropImage,
                     ),
 
                     const SizedBox(height: 10),
@@ -311,7 +329,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                     // Customize Card link
                     Center(
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _onCustomizeCard,
                         child: Text(
                           'Customize Card',
                           style: GoogleFonts.inter(

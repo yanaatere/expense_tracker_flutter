@@ -13,6 +13,9 @@ import 'features/wallet/wallet_screen.dart';
 import 'features/wallet/wallet_detail_screen.dart';
 import 'features/wallet/wallet_edit_screen.dart';
 import 'features/wallet/wallet_info_screen.dart';
+import 'features/wallet/wallet_expense_screen.dart';
+import 'features/wallet/wallet_income_screen.dart';
+import 'features/wallet/wallet_transaction_screen.dart';
 import 'service_locator.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/home/home_screen.dart';
@@ -163,6 +166,27 @@ final _router = GoRouter(
       builder: (context, state) {
         final wallet = state.extra as Wallet;
         return WalletInfoScreen(wallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/wallet/transactions',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletTransactionScreen(wallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/wallet/income',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletIncomeScreen(wallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/wallet/expense',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletExpenseScreen(wallet: wallet);
       },
     ),
     GoRoute(

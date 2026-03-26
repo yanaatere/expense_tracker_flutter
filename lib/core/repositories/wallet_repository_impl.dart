@@ -41,6 +41,7 @@ class WalletRepositoryImpl implements WalletRepository {
         currency: m['currency'] as String? ?? 'IDR',
         balance: (m['balance'] as num?)?.toDouble() ?? 0.0,
         goals: m['goals'] as String?,
+        backdropImage: m['backdrop_image'] as String?,
         syncStatus: 'synced',
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -128,6 +129,7 @@ class WalletRepositoryImpl implements WalletRepository {
     required String currency,
     required double balance,
     String? goals,
+    String? backdropImage,
   }) async {
     final userId = await _userId;
     final serverId = wallet.serverId != null ? int.tryParse(wallet.serverId!) : null;
@@ -141,6 +143,7 @@ class WalletRepositoryImpl implements WalletRepository {
           currency: currency,
           balance: balance,
           goals: goals,
+          backdropImage: backdropImage,
         );
         final updated = _fromApiMap(data, userId);
         // Parallel local cache update
@@ -158,6 +161,7 @@ class WalletRepositoryImpl implements WalletRepository {
       currency: currency,
       balance: balance,
       goals: goals,
+      backdropImage: backdropImage,
       syncStatus: serverId != null ? 'pending' : 'local',
     );
     await _walletDao.update(updated);

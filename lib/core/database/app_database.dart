@@ -13,7 +13,7 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'monex.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -77,7 +77,8 @@ class AppDatabase {
         type        TEXT NOT NULL,
         currency    TEXT NOT NULL DEFAULT 'IDR',
         balance     REAL NOT NULL DEFAULT 0,
-        goals       TEXT,
+        goals           TEXT,
+        backdrop_image  TEXT,
         sync_status TEXT NOT NULL DEFAULT 'local',
         created_at  INTEGER NOT NULL,
         updated_at  INTEGER NOT NULL
@@ -88,6 +89,11 @@ class AppDatabase {
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createWalletsTable(db);
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN backdrop_image TEXT',
+      );
     }
   }
 }

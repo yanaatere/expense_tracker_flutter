@@ -18,6 +18,7 @@ abstract class WalletRepository {
     required String currency,
     required double balance,
     String? goals,
+    String? backdropImage,
   });
 
   Future<void> deleteWallet({required Wallet wallet});

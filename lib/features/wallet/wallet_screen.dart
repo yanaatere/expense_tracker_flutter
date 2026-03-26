@@ -1,68 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-
 import '../../core/constants/app_colors.dart';
 import '../../core/models/wallet.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../service_locator.dart';
+import '../../shared/widgets/wallet_card.dart';
 
-// ── Gradient palette per wallet type ────────────────────────────────────────
-
-List<Color> _gradientForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return [const Color(0xFF96FBC4), const Color(0xFF74EBD5), const Color(0xFF9FACE6)];
-    case 'E-Wallet':
-      return [const Color(0xFF667EEA), const Color(0xFF764BA2), const Color(0xFF89F7FE)];
-    case 'Cash':
-      return [const Color(0xFF84FAB0), const Color(0xFF8FD3F4), const Color(0xFFE0C3FC)];
-    default:
-      return [const Color(0xFFA18CD1), const Color(0xFFFBC2EB), const Color(0xFFFFD6A5)];
-  }
-}
-
-String _iconForType(String type) {
-  switch (type) {
-    case 'Bank':
-      return 'assets/icons/wallets/bank.png';
-    case 'E-Wallet':
-      return 'assets/icons/wallets/ewallet.png';
-    case 'Cash':
-      return 'assets/icons/wallets/money.png';
-    default:
-      return 'assets/icons/wallets/creditcard.png';
-  }
-}
-
-// USD conversion rates (approximate, offline)
-double _toUsd(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      return amount / 15500;
-    case 'EUR':
-      return amount * 1.08;
-    default:
-      return amount;
-  }
-}
-
-String _formatBalance(double amount, String currency) {
-  switch (currency) {
-    case 'IDR':
-      final f = NumberFormat('#,##0', 'en_US');
-      return 'Rp. ${f.format(amount)}';
-    case 'EUR':
-      return '€ ${NumberFormat('#,##0.##').format(amount)}';
-    default:
-      return '\$ ${NumberFormat('#,##0.##').format(amount)}';
-  }
-}
-
-String _formatUsd(double amount, String currency) {
-  final usd = _toUsd(amount, currency);
-  return '/ USD ${NumberFormat('#,##0.##').format(usd)}';
-}
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
@@ -139,7 +83,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
                     color: AppColors.labelText,
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.go('/home'),
                   ),
                   Expanded(
                     child: Text(
@@ -183,8 +127,8 @@ class _WalletScreenState extends State<WalletScreen> {
                   const SizedBox(height: 6),
                   Text(
                     _allSameCurrency
-                        ? _formatBalance(_totalBalance, _totalCurrency)
-                        : _formatBalance(_totalBalance, 'IDR'),
+                        ? formatCurrency(_totalBalance, _totalCurrency)
+                        : formatCurrency(_totalBalance, 'IDR'),
                     style: GoogleFonts.inter(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
@@ -334,86 +278,25 @@ class _WalletCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradient = _gradientForType(wallet.type);
-    final usdText = _formatUsd(wallet.balance, wallet.currency);
-
     return GestureDetector(
       onTap: () async {
-        await context.push('/wallet/detail', extra: wallet);
+        await context.push('/wallet/transactions', extra: wallet);
         onWalletChanged();
       },
       child: AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      margin: EdgeInsets.only(
-        left: 16,
-        right: 8,
-        top: isActive ? 0 : 10,
-        bottom: isActive ? 0 : 10,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        margin: EdgeInsets.only(
+          left: 16,
+          right: 8,
+          top: isActive ? 0 : 10,
+          bottom: isActive ? 0 : 10,
         ),
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: gradient.first.withAlpha(120),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : [],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: icon + wallet name
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Image.asset(
-                _iconForType(wallet.type),
-                width: 28,
-                height: 28,
-                color: Colors.white,
-              ),
-              Text(
-                wallet.name,
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Balance
-          Text(
-            _formatBalance(wallet.balance, wallet.currency),
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            usdText,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withAlpha(180),
-            ),
-          ),
-        ],
-      ),
+        child: WalletCardWidget(
+          wallet: wallet,
+          height: 170,
+          elevated: isActive,
+        ),
       ),
     );
   }
