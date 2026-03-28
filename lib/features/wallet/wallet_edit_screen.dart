@@ -159,7 +159,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Choose Card Background',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.urbanist(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.labelText,
@@ -217,7 +217,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       alignment: Alignment.center,
                       child: Text(
                         'Apply',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -293,7 +293,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                     child: Text(
                       widget.wallet.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -332,7 +332,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                         onPressed: _onCustomizeCard,
                         child: Text(
                           'Customize Card',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: AppColors.primary,
@@ -347,7 +347,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                     Center(
                       child: Text(
                         'Card Information',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: AppColors.labelText,
@@ -371,7 +371,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                         value: t,
                                         child: Text(
                                           t,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.urbanist(
                                             fontSize: 14,
                                             color: AppColors.placeholderText,
                                           ),
@@ -409,7 +409,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                         value: o.name,
                                         child: Text(
                                           o.name,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.urbanist(
                                             fontSize: 14,
                                             color: AppColors.placeholderText,
                                           ),
@@ -439,7 +439,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                   value: c['code'],
                                   child: Text(
                                     c['label']!,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.urbanist(
                                       fontSize: 14,
                                       color: AppColors.placeholderText,
                                     ),
@@ -470,7 +470,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       const SizedBox(height: 12),
                       Text(
                         _error!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 13,
                           color: AppColors.error,
                         ),
@@ -507,7 +507,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                         )
                       : Text(
                           'Save',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -538,7 +538,7 @@ class _EditField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.urbanist(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: AppColors.labelText,
@@ -572,10 +572,10 @@ class _InputField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      style: GoogleFonts.inter(fontSize: 14, color: AppColors.placeholderText),
+      style: GoogleFonts.urbanist(fontSize: 14, color: AppColors.placeholderText),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: GoogleFonts.inter(
+        hintStyle: GoogleFonts.urbanist(
           fontSize: 14,
           color: AppColors.placeholderText,
         ),
@@ -633,7 +633,7 @@ class _DropdownField<T> extends StatelessWidget {
           color: AppColors.placeholderText,
           size: 20,
         ),
-        style: GoogleFonts.inter(
+        style: GoogleFonts.urbanist(
           fontSize: 14,
           color: AppColors.placeholderText,
         ),

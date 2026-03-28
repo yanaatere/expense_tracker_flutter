@@ -110,19 +110,19 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Wallet', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text('Delete Wallet', style: GoogleFonts.urbanist(fontWeight: FontWeight.w700)),
         content: Text(
           'Are you sure you want to delete "${widget.wallet.name}"? This cannot be undone.',
-          style: GoogleFonts.inter(fontSize: 14),
+          style: GoogleFonts.urbanist(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.placeholderText)),
+            child: Text('Cancel', style: GoogleFonts.urbanist(color: AppColors.placeholderText)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: GoogleFonts.inter(color: AppColors.expense, fontWeight: FontWeight.w600)),
+            child: Text('Delete', style: GoogleFonts.urbanist(color: AppColors.expense, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -174,7 +174,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                     child: Text(
                       wallet.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -222,7 +222,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                         ),
                         Text(
                           wallet.name,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -233,7 +233,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                     const Spacer(),
                     Text(
                       formatCurrency(wallet.balance, wallet.currency),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -242,7 +242,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                     const SizedBox(height: 2),
                     Text(
                       usdText,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 12,
                         color: Colors.white.withAlpha(180),
                       ),
@@ -296,7 +296,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                   const SizedBox(width: 6),
                   Text(
                     '${wallet.name} Recent Transaction',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.urbanist(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.labelText,
@@ -316,14 +316,14 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                       ? Center(
                           child: Text(
                             'Wallet not synced yet.',
-                            style: GoogleFonts.inter(color: AppColors.placeholderText),
+                            style: GoogleFonts.urbanist(color: AppColors.placeholderText),
                           ),
                         )
                       : _transactions.isEmpty
                           ? Center(
                               child: Text(
                                 'No transactions found.',
-                                style: GoogleFonts.inter(color: AppColors.placeholderText),
+                                style: GoogleFonts.urbanist(color: AppColors.placeholderText),
                               ),
                             )
                           : ListView.builder(
@@ -375,7 +375,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                             const SizedBox(width: 8),
                             Text(
                               'Edit Wallet',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.urbanist(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -434,7 +434,7 @@ class _FilterTab extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: selected ? activeColor : AppColors.placeholderText,
@@ -502,7 +502,7 @@ class _TransactionItem extends StatelessWidget {
               children: [
                 Text(
                   title.isNotEmpty ? title : 'Transaction',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.labelText,
@@ -513,7 +513,7 @@ class _TransactionItem extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle.isNotEmpty ? subtitle : formattedDate,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 12,
                     color: AppColors.placeholderText,
                   ),
@@ -524,7 +524,7 @@ class _TransactionItem extends StatelessWidget {
           // Amount
           Text(
             amountText,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: amountColor,

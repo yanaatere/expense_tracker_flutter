@@ -219,7 +219,7 @@ class _Header extends StatelessWidget {
                       'Welcome, $username',
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -228,7 +228,7 @@ class _Header extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       dateStr,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         color: AppColors.placeholderText,
@@ -280,7 +280,7 @@ class _TotalExpenseCard extends StatelessWidget {
         children: [
           Text(
             'Total Expense In $monthYear',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.placeholderText,
@@ -292,7 +292,7 @@ class _TotalExpenseCard extends StatelessWidget {
             children: [
               Text(
                 currency.format(12000000),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: AppColors.labelText,
@@ -307,7 +307,7 @@ class _TotalExpenseCard extends StatelessWidget {
                 ),
                 child: Text(
                   '+27%',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.expense,
@@ -319,7 +319,7 @@ class _TotalExpenseCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${currency.format(2123999)} of Last Month',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 13,
               fontWeight: FontWeight.w400,
               color: AppColors.placeholderText,
@@ -398,7 +398,7 @@ class _StatColumn extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: AppColors.placeholderText,
@@ -411,7 +411,7 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           amount,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.urbanist(
             fontSize: 15,
             fontWeight: FontWeight.w700,
             color: amountColor,
@@ -470,7 +470,7 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.labelText,
@@ -521,7 +521,7 @@ class _RecentTransactionSection extends StatelessWidget {
             Expanded(
               child: Text(
                 'Recent Transaction',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: AppColors.labelText,
@@ -532,7 +532,7 @@ class _RecentTransactionSection extends StatelessWidget {
               onTap: () {},
               child: Text(
                 'See More',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   color: AppColors.placeholderText,
@@ -566,7 +566,7 @@ class _RecentTransactionSection extends StatelessWidget {
                       child: Center(
                         child: Text(
                           error!,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 13,
                             color: AppColors.placeholderText,
                           ),
@@ -579,7 +579,7 @@ class _RecentTransactionSection extends StatelessWidget {
                           child: Center(
                             child: Text(
                               'No transactions yet',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.urbanist(
                                 fontSize: 13,
                                 color: AppColors.placeholderText,
                               ),
@@ -653,7 +653,7 @@ class _TransactionRow extends StatelessWidget {
               children: [
                 Text(
                   transaction.title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppColors.labelText,
@@ -662,7 +662,7 @@ class _TransactionRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   dateStr,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 12,
                     color: AppColors.placeholderText,
                   ),
@@ -673,7 +673,7 @@ class _TransactionRow extends StatelessWidget {
           // Amount
           Text(
             amountStr,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: amountColor,
@@ -810,7 +810,7 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 11,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                 color: color,

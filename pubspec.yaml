@@ -39,3 +39,22 @@ flutter:
     - assets/icons/
     - assets/icons/wallets/
     - assets/icons/wallets/wallet_transaction/
+    - assets/icons/Income/Category/
+    - "assets/icons/Income/Sub Category/Active income/"
+    - "assets/icons/Income/Sub Category/Business/"
+    - "assets/icons/Income/Sub Category/Investment/"
+    - "assets/icons/Income/Sub Category/Side Hustle/"
+    - assets/icons/expense/Category/
+    - "assets/icons/expense/Sub category/Bills/"
+    - "assets/icons/expense/Sub category/Education/"
+    - "assets/icons/expense/Sub category/Entertainment/"
+    - "assets/icons/expense/Sub category/Family and Friends/"
+    - "assets/icons/expense/Sub category/Financial/"
+    - "assets/icons/expense/Sub category/Food and Beverage/"
+    - "assets/icons/expense/Sub category/Health/"
+    - "assets/icons/expense/Sub category/Personal/"
+    - "assets/icons/expense/Sub category/Pet/"
+    - "assets/icons/expense/Sub category/Service and Maintenance/"
+    - "assets/icons/expense/Sub category/Shop/"
+    - "assets/icons/expense/Sub category/Transport/"
+    - "assets/icons/expense/Sub category/vacation/"

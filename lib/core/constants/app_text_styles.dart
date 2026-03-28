@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
-  static TextStyle logo = GoogleFonts.inter(
+  static TextStyle logo = GoogleFonts.urbanist(
     fontSize: 60,
     fontWeight: FontWeight.w900,
     color: const Color(0xFF2121D3),
@@ -11,31 +11,31 @@ class AppTextStyles {
     height: 1,
   );
 
-  static TextStyle heading = GoogleFonts.inter(
+  static TextStyle heading = GoogleFonts.urbanist(
     fontSize: 28,
     fontWeight: FontWeight.w700,
     color: AppColors.labelText,
   );
 
-  static TextStyle label = GoogleFonts.inter(
+  static TextStyle label = GoogleFonts.urbanist(
     fontSize: 13,
     fontWeight: FontWeight.w700,
     color: AppColors.labelText,
   );
 
-  static TextStyle body = GoogleFonts.inter(
+  static TextStyle body = GoogleFonts.urbanist(
     fontSize: 15,
     fontWeight: FontWeight.w400,
     color: AppColors.bodyText,
   );
 
-  static TextStyle buttonText = GoogleFonts.inter(
+  static TextStyle buttonText = GoogleFonts.urbanist(
     fontSize: 16,
     fontWeight: FontWeight.w700,
     color: Colors.white,
   );
 
-  static TextStyle caption = GoogleFonts.inter(
+  static TextStyle caption = GoogleFonts.urbanist(
     fontSize: 13,
     fontWeight: FontWeight.w400,
     color: AppColors.placeholderText,

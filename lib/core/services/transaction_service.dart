@@ -7,8 +7,11 @@ import 'api_client.dart';
 class TransactionService {
   static final _dio = ApiClient.dio;
 
-  static Future<List<Map<String, dynamic>>> getCategories() async {
-    final response = await _dio.get('/api/categories');
+  static Future<List<Map<String, dynamic>>> getCategories({String? type}) async {
+    final response = await _dio.get(
+      '/api/categories',
+      queryParameters: type != null ? {'type': type} : null,
+    );
     final envelope = response.data as Map<String, dynamic>;
     final data = envelope['data'] as List<dynamic>? ?? [];
     return data.cast<Map<String, dynamic>>();

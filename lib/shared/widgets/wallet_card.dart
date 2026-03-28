@@ -142,7 +142,7 @@ class WalletCardWidget extends StatelessWidget {
               ),
               Text(
                 _name,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -153,7 +153,7 @@ class WalletCardWidget extends StatelessWidget {
           const Spacer(),
           Text(
             formatCurrency(_balance, _currency),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 26,
               fontWeight: FontWeight.w800,
               color: Colors.white,
@@ -162,7 +162,7 @@ class WalletCardWidget extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             usdText,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 12,
               color: Colors.white.withAlpha(180),
             ),

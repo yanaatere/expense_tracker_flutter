@@ -98,7 +98,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                     child: Text(
                       wallet.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -167,7 +167,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                         const SizedBox(width: 8),
                         Text(
                           '${wallet.name} Recent Transaction',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppColors.labelText,
@@ -182,11 +182,11 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                     TextField(
                       controller: _searchController,
                       onChanged: (v) => setState(() => _searchQuery = v),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                           fontSize: 14, color: AppColors.labelText),
                       decoration: InputDecoration(
                         hintText: 'Search Transaction',
-                        hintStyle: GoogleFonts.inter(
+                        hintStyle: GoogleFonts.urbanist(
                           fontSize: 14,
                           color: AppColors.placeholderText,
                         ),
@@ -234,7 +234,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                         child: Center(
                           child: Text(
                             _error!,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.urbanist(
                               fontSize: 13,
                               color: AppColors.placeholderText,
                             ),
@@ -247,7 +247,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                         child: Center(
                           child: Text(
                             'No transactions found',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.urbanist(
                               fontSize: 13,
                               color: AppColors.placeholderText,
                             ),
@@ -329,7 +329,7 @@ class _FilterTab extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
@@ -394,7 +394,7 @@ class _TxRow extends StatelessWidget {
               children: [
                 Text(
                   description,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.labelText,
@@ -403,7 +403,7 @@ class _TxRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   dateLabel,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 12,
                     color: AppColors.placeholderText,
                   ),
@@ -413,7 +413,7 @@ class _TxRow extends StatelessWidget {
           ),
           Text(
             amountStr,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: amountColor,

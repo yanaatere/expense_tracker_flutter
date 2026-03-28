@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/category_definitions.dart';
 import '../../core/services/transaction_service.dart';
 import '../../core/services/wallet_service.dart';
 
@@ -25,7 +26,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _noteController = TextEditingController();
 
   List<Map<String, dynamic>> _categories = [];
-  List<Map<String, dynamic>> _subCategories = [];
   Map<String, dynamic>? _selectedCategory;
   Map<String, dynamic>? _selectedSubCategory;
 
@@ -45,31 +45,60 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _loadData() async {
-    final catFuture = TransactionService.getCategories().catchError((_) => <Map<String, dynamic>>[]);
-    final walletFuture = WalletService.getWallets().catchError((_) => <Map<String, dynamic>>[]);
-    final results = await Future.wait([catFuture, walletFuture]);
+    final wallets = await WalletService.getWallets()
+        .catchError((_) => <Map<String, dynamic>>[]);
     if (!mounted) return;
     setState(() {
-      _categories = results[0];
-      _wallets = results[1];
+      _categories = localCategories(type: _type);
+      _wallets = wallets;
       if (_wallets.isNotEmpty) _selectedWallet = _wallets.first;
     });
   }
 
-  Future<void> _onCategoryTap(Map<String, dynamic> cat) async {
+  void _reloadCategories() {
+    setState(() => _categories = localCategories(type: _type));
+  }
+
+  Future<void> _showCategoryPicker() async {
+    final cat = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ItemPickerSheet(
+        title: 'Select Category',
+        items: _categories,
+        selectedId: _selectedCategory?['id'],
+        type: _type,
+        isSub: false,
+      ),
+    );
+    if (cat == null || !mounted) return;
     setState(() {
       _selectedCategory = cat;
-      _selectedSubCategory = null;
-      _subCategories = [];
+      _selectedSubCategory = null; // reset sub when category changes
     });
-    try {
-      final subs = await TransactionService.getSubCategories(cat['id'] as int);
-      if (!mounted) return;
-      setState(() {
-        _subCategories = subs;
-        if (subs.isNotEmpty) _selectedSubCategory = subs.first;
-      });
-    } catch (_) {}
+  }
+
+  Future<void> _showSubCategoryPicker() async {
+    if (_selectedCategory == null) return;
+    final categoryName = _selectedCategory!['name'] as String;
+    final items = localSubcategories(categoryName, type: _type);
+    if (items.isEmpty) return;
+
+    final sub = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ItemPickerSheet(
+        title: categoryName,
+        items: items,
+        selectedId: _selectedSubCategory?['id'],
+        type: _type,
+        isSub: true,
+      ),
+    );
+    if (sub == null || !mounted) return;
+    setState(() => _selectedSubCategory = sub);
   }
 
   double get _amount => double.tryParse(_amountStr) ?? 0;
@@ -82,12 +111,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       (m) => '${m[1]},',
     );
     return 'Rp. $formatted';
-  }
-
-  String get _categoryLabel {
-    if (_selectedSubCategory != null) return _selectedSubCategory!['name'] as String;
-    if (_selectedCategory != null) return _selectedCategory!['name'] as String;
-    return 'None';
   }
 
   void _onDigit(String d) {
@@ -206,7 +229,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     child: Text(
                       'Add Transaction',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -232,26 +255,40 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     _ToggleTab(
                       label: 'Income',
                       selected: isIncome,
-                      onTap: () => setState(() { _type = 'income'; }),
+                      onTap: () {
+                        setState(() {
+                          _type = 'income';
+                          _selectedCategory = null;
+                          _selectedSubCategory = null;
+                        });
+                        _reloadCategories();
+                      },
                     ),
                     _ToggleTab(
                       label: 'Expense',
                       selected: !isIncome,
-                      onTap: () => setState(() { _type = 'expense'; }),
+                      onTap: () {
+                        setState(() {
+                          _type = 'expense';
+                          _selectedCategory = null;
+                          _selectedSubCategory = null;
+                        });
+                        _reloadCategories();
+                      },
                     ),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // ── Amount display ─────────────────────────────────────────────
             Column(
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 13,
                     color: AppColors.placeholderText,
                   ),
@@ -259,7 +296,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 const SizedBox(height: 4),
                 Text(
                   _formattedAmount,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: AppColors.labelText,
@@ -267,7 +304,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 Text(
                   'Enter Amount',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 12,
                     color: AppColors.placeholderText,
                   ),
@@ -275,78 +312,57 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // ── Category chips ─────────────────────────────────────────────
-            if (_categories.isNotEmpty) ...[
-              SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: _categories.map((cat) {
-                    final selected = _selectedCategory?['id'] == cat['id'];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _CategoryChip(
-                        label: cat['name'] as String,
-                        icon: cat['icon'] as String?,
-                        selected: selected,
-                        onTap: () => _onCategoryTap(cat),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              if (_subCategories.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: _subCategories.map((sub) {
-                      final selected = _selectedSubCategory?['id'] == sub['id'];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _CategoryChip(
-                          label: sub['name'] as String,
-                          icon: sub['icon'] as String?,
-                          selected: selected,
-                          onTap: () => setState(() => _selectedSubCategory = sub),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Category : $_categoryLabel',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppColors.placeholderText,
+            // ── Category + Sub-category pills ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _CategoryPill(
+                      label: _selectedCategory != null
+                          ? _selectedCategory!['name'] as String
+                          : 'Category',
+                      icon: _selectedCategory != null
+                          ? _CategoryIcon(
+                              name: _selectedCategory!['name'] as String,
+                              isSub: false,
+                              size: 18,
+                              type: _type,
+                            )
+                          : const Icon(Icons.grid_view_rounded,
+                              size: 16, color: AppColors.placeholderText),
+                      hasValue: _selectedCategory != null,
+                      enabled: _categories.isNotEmpty,
+                      onTap: _showCategoryPicker,
                     ),
                   ),
-                ),
-              ),
-            ] else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Category : None',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppColors.placeholderText,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _CategoryPill(
+                      label: _selectedSubCategory != null
+                          ? _selectedSubCategory!['name'] as String
+                          : 'Sub-category',
+                      icon: _selectedSubCategory != null
+                          ? _CategoryIcon(
+                              name: _selectedSubCategory!['name'] as String,
+                              isSub: true,
+                              size: 18,
+                              type: _type,
+                            )
+                          : const Icon(Icons.list_rounded,
+                              size: 16, color: AppColors.placeholderText),
+                      hasValue: _selectedSubCategory != null,
+                      enabled: _selectedCategory != null,
+                      onTap: _showSubCategoryPicker,
                     ),
                   ),
-                ),
+                ],
               ),
+            ),
+
+            const SizedBox(height: 10),
 
             // ── Input row 1: Title + Wallet ────────────────────────────────
             Padding(
@@ -369,7 +385,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
             // ── Input row 2: Note + Attach ─────────────────────────────────
             Padding(
@@ -409,7 +425,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                 const SizedBox(width: 4),
                                 Text(
                                   _receiptUrl != null ? 'Receipt' : 'Add',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.urbanist(
                                     fontSize: 13,
                                     color: _receiptUrl != null ? AppColors.primary : AppColors.placeholderText,
                                   ),
@@ -422,7 +438,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // ── Numpad ─────────────────────────────────────────────────────
             Padding(
@@ -430,17 +446,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               child: Column(
                 children: [
                   _NumRow(keys: ['1', '2', '3'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   _NumRow(keys: ['4', '5', '6'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   _NumRow(keys: ['7', '8', '9'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   _NumLastRow(onDigit: _onDigit, onBackspace: _onBackspace),
                 ],
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // ── Submit button ──────────────────────────────────────────────
             Padding(
@@ -469,7 +485,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         )
                       : Text(
                           label,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.urbanist(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -528,7 +544,7 @@ class _SuccessDialogState extends State<_SuccessDialog> {
             Text(
               '${widget.label} transactions\nhave been added',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: AppColors.labelText,
@@ -569,7 +585,7 @@ class _ToggleTab extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: selected ? Colors.white : AppColors.placeholderText,
@@ -581,55 +597,235 @@ class _ToggleTab extends StatelessWidget {
   }
 }
 
-// ── Category chip ─────────────────────────────────────────────────────────────
+// ── Category icon helper ──────────────────────────────────────────────────────
 
-class _CategoryChip extends StatelessWidget {
+class _CategoryIcon extends StatelessWidget {
+  final String name;
+  final bool isSub;
+  final double size;
+  final String type;
+
+  const _CategoryIcon({
+    required this.name,
+    required this.isSub,
+    this.size = 28,
+    this.type = 'income',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final path = isSub
+        ? subCategoryIconPath(name, type: type)
+        : categoryIconPath(name, type: type);
+    if (path == null) {
+      return Icon(Icons.category_rounded,
+          size: size, color: AppColors.placeholderText);
+    }
+    return Image.asset(
+      path,
+      width: size,
+      height: size,
+      errorBuilder: (context, error, stack) => Icon(Icons.category_rounded,
+          size: size, color: AppColors.placeholderText),
+    );
+  }
+}
+
+// ── Category pill button ──────────────────────────────────────────────────────
+
+class _CategoryPill extends StatelessWidget {
   final String label;
-  final String? icon;
-  final bool selected;
+  final Widget icon;
+  final bool hasValue;
+  final bool enabled;
   final VoidCallback onTap;
 
-  const _CategoryChip({
+  const _CategoryPill({
     required this.label,
-    this.icon,
-    required this.selected,
+    required this.icon,
+    required this.hasValue,
+    required this.enabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = selected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.cardBg;
-    final textColor = selected ? AppColors.primary : AppColors.labelText;
-    final arrowColor = selected ? AppColors.primary : AppColors.placeholderText;
-
     return GestureDetector(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null && icon!.isNotEmpty) ...[
-              Text(icon!, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: textColor,
+            icon,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.urbanist(
+                  fontSize: 13,
+                  color: hasValue
+                      ? AppColors.labelText
+                      : AppColors.placeholderText,
+                ),
               ),
             ),
-            const SizedBox(width: 4),
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: arrowColor,
+              color: enabled
+                  ? AppColors.placeholderText
+                  : AppColors.placeholderText.withAlpha(80),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Item picker bottom sheet (category or sub-category) ───────────────────────
+
+class _ItemPickerSheet extends StatelessWidget {
+  final String title;
+  final List<Map<String, dynamic>> items;
+  final int? selectedId;
+  final String type;
+  final bool isSub;
+
+  const _ItemPickerSheet({
+    required this.title,
+    required this.items,
+    required this.type,
+    required this.isSub,
+    this.selectedId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Handle + title (fixed, doesn't scroll) ──────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.inputBorder,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    style: GoogleFonts.urbanist(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.labelText,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+            // ── Scrollable list ──────────────────────────────────────────
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+            ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final name = item['name'] as String;
+            final isSelected = item['id'] != null && item['id'] == selectedId;
+            final color = isSub
+                ? subCategoryColor(name, type: type, fallbackIndex: index)
+                : categoryColor(name, type: type, fallbackIndex: index);
+
+            return GestureDetector(
+              onTap: () => Navigator.pop(context, item),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 4),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color.withAlpha(20)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    // Colored left accent bar (categories only)
+                    if (!isSub)
+                      Container(
+                        width: 4,
+                        height: 52,
+                        margin: const EdgeInsets.only(left: 4, right: 8),
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 12),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(30),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: _CategoryIcon(
+                          name: name, isSub: isSub, size: 24, type: type),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.urbanist(
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: isSelected ? color : AppColors.labelText,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(Icons.check_rounded, size: 18, color: color),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -656,10 +852,10 @@ class _InputField extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
-        style: GoogleFonts.inter(fontSize: 13, color: AppColors.labelText),
+        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.inter(
+          hintStyle: GoogleFonts.urbanist(
             fontSize: 13,
             color: AppColors.placeholderText,
           ),
@@ -714,7 +910,7 @@ class _WalletPicker extends StatelessWidget {
           children: [
             Text(
               selected?['name'] as String? ?? 'Wallet',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 13,
                 color: AppColors.labelText,
               ),
@@ -778,7 +974,7 @@ class _WalletDialog extends StatelessWidget {
             child: Center(
               child: Text(
                 'Select Wallet',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.labelText,
@@ -793,7 +989,7 @@ class _WalletDialog extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
               child: Text(
                 _formatType(entry.key),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppColors.labelText,
@@ -848,7 +1044,7 @@ class _WalletRow extends StatelessWidget {
             Expanded(
               child: Text(
                 wallet['name'] as String? ?? '',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: isSelected ? AppColors.primary : AppColors.labelText,
@@ -860,14 +1056,14 @@ class _WalletRow extends StatelessWidget {
               children: [
                 Text(
                   'Balance',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 11,
                     color: AppColors.placeholderText,
                   ),
                 ),
                 Text(
                   formatBalance(wallet['balance']),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.urbanist(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: isSelected ? AppColors.primary : AppColors.labelText,
@@ -969,7 +1165,7 @@ class _NumKey extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.urbanist(
             fontSize: isAction ? 20 : 22,
             fontWeight: FontWeight.w600,
             color: AppColors.primary,

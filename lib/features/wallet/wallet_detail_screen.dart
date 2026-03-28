@@ -101,7 +101,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                     child: Text(
                       wallet.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -133,7 +133,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                     Center(
                       child: Text(
                         'Card Information',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: AppColors.labelText,
@@ -247,7 +247,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                             const SizedBox(width: 8),
                             Text(
                               'Edit Wallet',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.urbanist(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -283,7 +283,7 @@ class _InfoField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.urbanist(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: AppColors.labelText,
@@ -299,7 +299,7 @@ class _InfoField extends StatelessWidget {
           ),
           child: Text(
             value,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 14,
               color: AppColors.placeholderText,
             ),
@@ -330,7 +330,7 @@ class _DeleteWalletDialog extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Delete Wallet',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 12,
                   color: AppColors.placeholderText,
                 ),
@@ -340,7 +340,7 @@ class _DeleteWalletDialog extends StatelessWidget {
             // Title
             Text(
               'Delete Wallet',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppColors.labelText,
@@ -351,7 +351,7 @@ class _DeleteWalletDialog extends StatelessWidget {
             // Body
             Text(
               'By deleting this wallet you will no longer be able to see any transactions on this wallet.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.urbanist(
                 fontSize: 14,
                 color: AppColors.placeholderText,
                 height: 1.5,
@@ -375,7 +375,7 @@ class _DeleteWalletDialog extends StatelessWidget {
                       alignment: Alignment.center,
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -402,7 +402,7 @@ class _DeleteWalletDialog extends StatelessWidget {
                       alignment: Alignment.center,
                       child: Text(
                         'Delete',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.urbanist(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,

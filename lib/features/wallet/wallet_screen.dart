@@ -89,7 +89,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     child: Text(
                       'Wallet',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.labelText,
@@ -118,7 +118,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   const SizedBox(height: 10),
                   Text(
                     'Total Balance',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.urbanist(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: AppColors.placeholderText,
@@ -129,7 +129,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     _allSameCurrency
                         ? formatCurrency(_totalBalance, _totalCurrency)
                         : formatCurrency(_totalBalance, 'IDR'),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.urbanist(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
                       color: AppColors.labelText,
@@ -189,7 +189,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
       child: Text(
         label,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.urbanist(
           fontSize: 15,
           fontWeight: FontWeight.w600,
           color: AppColors.labelText,
@@ -340,7 +340,7 @@ class _AddWalletCard extends StatelessWidget {
               quarterTurns: 1,
               child: Text(
                 'Add Wallet',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.placeholderText,
@@ -379,7 +379,7 @@ class _AddWalletRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'Add New Wallet',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
@@ -410,7 +410,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No wallets yet',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.labelText,
@@ -419,7 +419,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Add your first wallet to get started',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.urbanist(
               fontSize: 13,
               color: AppColors.placeholderText,
             ),
@@ -435,7 +435,7 @@ class _EmptyState extends StatelessWidget {
               ),
               child: Text(
                 'Add Wallet',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
