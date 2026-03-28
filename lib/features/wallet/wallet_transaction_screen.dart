@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
+import '../../service_locator.dart';
 import '../../shared/widgets/wallet_card.dart';
 
 String _txIconAsset(String type) {
@@ -25,6 +26,8 @@ class WalletTransactionScreen extends StatefulWidget {
 }
 
 class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
+  Wallet? _walletOverride;
+  Wallet get _wallet => _walletOverride ?? widget.wallet;
   List<Map<String, dynamic>> _all = [];
   bool _loading = true;
   String? _error;
@@ -36,6 +39,12 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  Future<void> _reloadWallet() async {
+    final wallets = await ServiceLocator.walletRepository.getWallets();
+    final updated = wallets.where((w) => w.id == _wallet.id).firstOrNull;
+    if (updated != null && mounted) setState(() => _walletOverride = updated);
   }
 
   Future<void> _load() async {
@@ -77,7 +86,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final wallet = widget.wallet;
+    final wallet = _wallet;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -117,7 +126,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Wallet card ──────────────────────────────────────────
-                    WalletCardWidget(wallet: wallet, height: 170),
+                    WalletCardWidget(wallet: _wallet, height: 192, width: null),
 
                     const SizedBox(height: 20),
 
@@ -128,7 +137,10 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                           icon: 'assets/icons/wallets/wallet_transaction/credit_card.webp',
                           label: 'Card Detail',
                           selected: false,
-                          onTap: () => context.push('/wallet/detail', extra: wallet),
+                          onTap: () async {
+                            await context.push('/wallet/detail', extra: wallet);
+                            await _reloadWallet();
+                          },
                         ),
                         const SizedBox(width: 8),
                         _FilterTab(

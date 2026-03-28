@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/wallet_definitions.dart';
-import '../../core/services/wallet_service.dart';
 import '../../core/storage/local_storage.dart';
+import '../../service_locator.dart';
 import '../../shared/widgets/primary_button.dart';
 
 class SetupWalletScreen extends StatefulWidget {
@@ -127,15 +127,21 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
       _error = null;
     });
     try {
-      await WalletService.createWallet(
+      await ServiceLocator.walletRepository.createWallet(
         name: _effectiveName,
         type: _type,
         currency: _currency,
         balance: double.tryParse(_balanceController.text) ?? 0,
-        goals: _goalsController.text,
+        goals: _goalsController.text.isNotEmpty ? _goalsController.text : null,
       );
       await LocalStorage.setOnboardingCompleted();
-      if (mounted) context.go(widget.returnRoute);
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(widget.returnRoute);
+        }
+      }
     } on Exception catch (e) {
       setState(() {
         _error = e.toString();

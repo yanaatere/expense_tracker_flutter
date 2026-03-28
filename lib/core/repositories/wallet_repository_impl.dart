@@ -55,10 +55,9 @@ class WalletRepositoryImpl implements WalletRepository {
       try {
         final remote = await WalletService.getWallets();
         final wallets = remote.map((m) => _fromApiMap(m, userId)).toList();
-        // Parallel local cache update — don't block the return
         _walletDao.upsertAll(wallets);
         return wallets;
-      } on DioException {
+      } catch (_) {
         // Fall through to local cache
       }
     }
@@ -86,8 +85,7 @@ class WalletRepositoryImpl implements WalletRepository {
           goals: goals,
         );
         final wallet = _fromApiMap(data, userId);
-        // Parallel local cache write
-        _walletDao.insert(wallet);
+        await _walletDao.insert(wallet);
         return wallet;
       } on DioException {
         // Fall through to offline path

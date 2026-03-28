@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/services/transaction_service.dart';
 import '../../core/services/wallet_service.dart';
+import '../../service_locator.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -45,12 +46,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _loadData() async {
-    final wallets = await WalletService.getWallets()
-        .catchError((_) => <Map<String, dynamic>>[]);
+    final wallets = await ServiceLocator.walletRepository.getWallets()
+        .catchError((_) => []);
     if (!mounted) return;
     setState(() {
       _categories = localCategories(type: _type);
-      _wallets = wallets;
+      _wallets = wallets.map((w) => <String, dynamic>{
+        'id': w.serverId != null ? int.tryParse(w.serverId!) : null,
+        'name': w.name,
+        'type': w.type,
+        'balance': w.balance,
+      }).where((m) => m['id'] != null).toList();
       if (_wallets.isNotEmpty) _selectedWallet = _wallets.first;
     });
   }
@@ -176,15 +182,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       );
       return;
     }
+    if (_selectedWallet == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a wallet')),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       await TransactionService.createTransaction(
         type: _type,
         amount: _amount,
         description: _titleController.text,
-        categoryId: _selectedCategory != null ? _selectedCategory!['id'] as int? : null,
-        subCategoryId: _selectedSubCategory != null ? _selectedSubCategory!['id'] as int? : null,
-        walletId: _selectedWallet != null ? (_selectedWallet!['id'] as int?) : null,
+        walletId: _selectedWallet!['id'] as int?,
         receiptImageUrl: _receiptUrl,
       );
       if (mounted) await _showSuccessDialog();

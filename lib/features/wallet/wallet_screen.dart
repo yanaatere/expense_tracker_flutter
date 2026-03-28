@@ -44,7 +44,7 @@ class _WalletScreenState extends State<WalletScreen> {
   String get _totalCurrency => _wallets.isEmpty ? 'IDR' : _wallets.first.currency;
 
   Map<String, List<Wallet>> get _grouped {
-    final order = ['Cash', 'Bank', 'E-Wallet'];
+    final order = ['Cash', 'Bank', 'Credit', 'E-Wallet'];
     final map = <String, List<Wallet>>{};
     for (final type in order) {
       final list = _wallets.where((w) => w.type == type).toList();
@@ -62,6 +62,7 @@ class _WalletScreenState extends State<WalletScreen> {
   String _sectionLabel(String type) {
     switch (type) {
       case 'Bank': return 'Bank Account';
+      case 'Credit': return 'Credit';
       case 'E-Wallet': return 'E-Wallet';
       case 'Cash': return 'Cash';
       default: return type;
@@ -157,7 +158,6 @@ class _WalletScreenState extends State<WalletScreen> {
                               ),
                               const SizedBox(height: 8),
                             ],
-                            // "Add Wallet" section when we have wallets
                             _AddWalletRow(onTap: _navigateToAdd),
                           ],
                         ),
@@ -220,14 +220,12 @@ class _WalletTypeRowState extends State<_WalletTypeRow> {
   late final PageController _controller;
   int _page = 0;
 
-  // Total pages = wallets + 1 "Add" card
-  int get _pageCount => widget.wallets.length + 1;
+  int get _pageCount => widget.wallets.length;
 
   @override
   void initState() {
     super.initState();
-    // viewportFraction < 1 so the next card peeks
-    _controller = PageController(viewportFraction: 0.82);
+    _controller = PageController();
     _controller.addListener(() {
       final p = _controller.page?.round() ?? 0;
       if (p != _page) setState(() => _page = p);
@@ -243,20 +241,17 @@ class _WalletTypeRowState extends State<_WalletTypeRow> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 170,
+      height: 192,
       child: PageView.builder(
         controller: _controller,
         itemCount: _pageCount,
-        padEnds: false,
+        padEnds: true,
         itemBuilder: (context, index) {
-          if (index < widget.wallets.length) {
-            return _WalletCard(
-              wallet: widget.wallets[index],
-              isActive: index == _page,
-              onWalletChanged: widget.onWalletChanged,
-            );
-          }
-          return _AddWalletCard(onTap: widget.onAddWallet);
+          return _WalletCard(
+            wallet: widget.wallets[index],
+            isActive: index == _page,
+            onWalletChanged: widget.onWalletChanged,
+          );
         },
       ),
     );
@@ -286,15 +281,14 @@ class _WalletCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        margin: EdgeInsets.only(
-          left: 16,
-          right: 8,
-          top: isActive ? 0 : 10,
-          bottom: isActive ? 0 : 10,
+        margin: EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: isActive ? 0 : 10,
         ),
         child: WalletCardWidget(
           wallet: wallet,
-          height: 170,
+          width: null,
+          height: 192,
           elevated: isActive,
         ),
       ),

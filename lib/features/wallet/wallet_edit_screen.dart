@@ -137,14 +137,16 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetCtx) {
+        final bottomInset = MediaQuery.of(sheetCtx).padding.bottom;
         return StatefulBuilder(
           builder: (_, setSheetState) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + bottomInset),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -166,40 +168,44 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _backdropAssets.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.6,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(sheetCtx).size.height * 0.55,
                     ),
-                    itemBuilder: (_, i) {
-                      final asset = _backdropAssets[i];
-                      final isSelected = pending == asset;
-                      return GestureDetector(
-                        onTap: () => setSheetState(() => pending = asset),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                              width: 2.5,
-                            ),
-                            image: DecorationImage(
-                              image: AssetImage(asset),
-                              fit: BoxFit.cover,
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      itemCount: _backdropAssets.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.6,
+                      ),
+                      itemBuilder: (_, i) {
+                        final asset = _backdropAssets[i];
+                        final isSelected = pending == asset;
+                        return GestureDetector(
+                          onTap: () => setSheetState(() => pending = asset),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.transparent,
+                                width: 2.5,
+                              ),
+                              image: DecorationImage(
+                                image: AssetImage(asset),
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 16),
                   GestureDetector(
