@@ -287,9 +287,7 @@ class _WalletCard extends StatelessWidget {
         ),
         child: WalletCardWidget(
           wallet: wallet,
-          width: null,
-          height: 192,
-          elevated: isActive,
+          elevated: false,
         ),
       ),
     );

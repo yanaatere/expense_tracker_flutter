@@ -74,8 +74,8 @@ class WalletCardWidget extends StatelessWidget {
   const WalletCardWidget({
     super.key,
     required this.wallet,
-    this.height = 192,
-    this.width = 290,
+    this.height = 230,
+    this.width = 310,
     this.typeOverride,
     this.nameOverride,
     this.balanceOverride,

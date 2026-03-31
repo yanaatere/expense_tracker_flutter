@@ -119,7 +119,10 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.pageBg,
       extendBody: true,
       bottomNavigationBar: _GlassBottomNav(onAddTransaction: _loadTransactions),
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => Future.wait([_loadUser(), _loadTransactions()]),
+        child: CustomScrollView(
         controller: _scrollController,
         slivers: [
           // ── Sticky header ──────────────────────────────────────────────
@@ -158,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _QuickActions(),
+              child: _QuickActions(onWalletReturn: _loadTransactions),
             ),
           ),
 
@@ -177,6 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // ── Bottom padding so content clears the nav bar ──────────────
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+        ),
       ),
     );
   }
@@ -427,6 +431,9 @@ class _StatColumn extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _QuickActions extends StatelessWidget {
+  final VoidCallback onWalletReturn;
+  const _QuickActions({required this.onWalletReturn});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -435,7 +442,14 @@ class _QuickActions extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(child: _ActionButton(icon: Icons.sync, label: 'Recurring', onTap: () {})),
         const SizedBox(width: 8),
-        Expanded(child: _ActionButton(icon: Icons.account_balance_wallet, label: 'Wallet', onTap: () => context.push('/wallet'))),
+        Expanded(child: _ActionButton(
+          icon: Icons.account_balance_wallet,
+          label: 'Wallet',
+          onTap: () async {
+            await context.push('/wallet');
+            onWalletReturn();
+          },
+        )),
       ],
     );
   }

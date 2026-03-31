@@ -123,8 +123,6 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                     // ── Wallet card ──────────────────────────────────────────
                     WalletCardWidget(
                       wallet: wallet,
-                      width: 310,
-                      height: 230,
                     ),
 
                     const SizedBox(height: 28),

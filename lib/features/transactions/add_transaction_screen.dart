@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/services/transaction_service.dart';
+import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
 
@@ -47,7 +48,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadData() async {
     final wallets = await ServiceLocator.walletRepository.getWallets()
-        .catchError((_) => []);
+        .catchError((_) => <Wallet>[]);
     if (!mounted) return;
     setState(() {
       _categories = localCategories(type: _type);
@@ -194,6 +195,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         type: _type,
         amount: _amount,
         description: _titleController.text,
+        categoryId: _selectedCategory?['id'] as int?,
+        subCategoryId: _selectedSubCategory?['id'] as int?,
         walletId: _selectedWallet!['id'] as int?,
         receiptImageUrl: _receiptUrl,
       );

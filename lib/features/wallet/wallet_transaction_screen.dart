@@ -126,7 +126,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Wallet card ──────────────────────────────────────────
-                    WalletCardWidget(wallet: _wallet, height: 192, width: null),
+                    WalletCardWidget(wallet: _wallet),
 
                     const SizedBox(height: 20),
 

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'core/constants/app_colors.dart';
+import 'core/services/api_client.dart';
 import 'core/models/wallet.dart';
 import 'core/storage/local_storage.dart';
 import 'features/auth/create_account_screen.dart';
@@ -33,6 +34,10 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ApiClient.onUnauthorized = () {
+      LocalStorage.clearAll();
+      _router.go('/signin');
+    };
   }
 
   @override

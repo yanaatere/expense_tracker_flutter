@@ -8,6 +8,10 @@ class ApiClient {
     defaultValue: 'http://localhost:3000',
   );
 
+  /// Called when the server returns 401. Wire this up in app.dart to
+  /// clear local state and navigate to /signin.
+  static VoidCallback? onUnauthorized;
+
   static final Dio dio = _buildDio();
 
   static Dio _buildDio() {
@@ -42,7 +46,11 @@ class ApiClient {
           }
           handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            await LocalStorage.clearAll();
+            onUnauthorized?.call();
+          }
           handler.next(error);
         },
       ),
