@@ -140,6 +140,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
   }
 
+  Future<void> _removeReceipt() async {
+    final urlToDelete = _receiptUrl;
+    setState(() {
+      _receiptFile = null;
+      _receiptUrl = null;
+    });
+    if (urlToDelete != null) {
+      try {
+        await TransactionService.deleteReceipt(urlToDelete);
+      } on DioException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(WalletService.errorMessage(e))),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _pickReceipt() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
@@ -414,11 +433,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: (_uploadingReceipt || _submitting) ? null : _pickReceipt,
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
                       height: 44,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: _receiptUrl != null ? AppColors.primary.withValues(alpha: 0.12) : AppColors.cardBg,
+                        color: _receiptUrl != null
+                            ? const Color(0xFF5AC45A).withValues(alpha: 0.15)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(40),
                       ),
                       child: _uploadingReceipt
@@ -430,19 +453,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           : Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  _receiptUrl != null ? Icons.check_circle_rounded : Icons.attach_file_rounded,
-                                  size: 16,
-                                  color: _receiptUrl != null ? AppColors.primary : AppColors.placeholderText,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _receiptUrl != null ? 'Receipt' : 'Add',
-                                  style: GoogleFonts.urbanist(
-                                    fontSize: 13,
-                                    color: _receiptUrl != null ? AppColors.primary : AppColors.placeholderText,
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  child: Icon(
+                                    _receiptUrl != null ? Icons.check_circle_rounded : Icons.attach_file_rounded,
+                                    key: ValueKey(_receiptUrl != null),
+                                    size: 16,
+                                    color: _receiptUrl != null
+                                        ? const Color(0xFF5AC45A)
+                                        : AppColors.placeholderText,
                                   ),
                                 ),
+                                const SizedBox(width: 4),
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 250),
+                                  style: GoogleFonts.urbanist(
+                                    fontSize: 13,
+                                    color: _receiptUrl != null
+                                        ? const Color(0xFF5AC45A)
+                                        : AppColors.placeholderText,
+                                  ),
+                                  child: Text(_receiptUrl != null ? 'Receipt' : 'Add'),
+                                ),
+                                if (_receiptUrl != null) ...[
+                                  const SizedBox(width: 6),
+                                  GestureDetector(
+                                    onTap: _submitting ? null : _removeReceipt,
+                                    child: const Icon(
+                                      Icons.close_rounded,
+                                      size: 14,
+                                      color: Color(0xFF5AC45A),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                     ),

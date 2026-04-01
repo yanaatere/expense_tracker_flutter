@@ -38,9 +38,11 @@ class WalletService {
   static Future<List<Map<String, dynamic>>> getWalletTransactions(
     int walletId, {
     String? type,
+    int? categoryId,
   }) async {
     final params = <String, dynamic>{};
     if (type != null) params['type'] = type;
+    if (categoryId != null) params['category_id'] = categoryId;
     final response = await _dio.get(
       '/api/wallets/$walletId/transactions',
       queryParameters: params.isNotEmpty ? params : null,

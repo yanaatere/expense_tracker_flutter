@@ -36,21 +36,29 @@ class _WalletExpenseScreenState extends State<WalletExpenseScreen> {
     _load();
   }
 
+  int? get _selectedCategoryId {
+    if (_categoryFilter == null) return null;
+    final match = expenseCategories.firstWhere(
+      (c) => c['name'] == _categoryFilter,
+      orElse: () => {},
+    );
+    return match['id'] as int?;
+  }
+
   Future<void> _load() async {
     final serverId = widget.wallet.serverId != null
         ? int.tryParse(widget.wallet.serverId!)
         : null;
     if (serverId == null) {
-      setState(() {
-        _loading = false;
-        _error = 'Wallet not synced yet';
-      });
+      setState(() { _loading = false; _error = 'Wallet not synced yet'; });
       return;
     }
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await WalletService.getWalletTransactions(
         serverId,
         type: 'expense',
+        categoryId: _selectedCategoryId,
       );
       if (mounted) setState(() { _all = data; _loading = false; });
     } catch (_) {
@@ -90,9 +98,6 @@ class _WalletExpenseScreenState extends State<WalletExpenseScreen> {
         if (_periodFilter == 'Last year' && date.year != now.year - 1) return false;
       }
 
-      final cat = (t['category_name'] as String? ?? '');
-      if (_categoryFilter != null && cat != _categoryFilter) return false;
-
       final desc = (t['description'] as String? ?? '').toLowerCase();
       if (_searchQuery.isNotEmpty && !desc.contains(_searchQuery.toLowerCase())) {
         return false;
@@ -107,20 +112,31 @@ class _WalletExpenseScreenState extends State<WalletExpenseScreen> {
     return sum + (raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0);
   });
 
-  List<String> get _categories {
-    final cats = _all
-        .map((t) => t['category_name'] as String? ?? '')
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    return cats;
+  List<String> get _categories =>
+      expenseCategories.map((c) => c['name'] as String).toList();
+
+  String _resolveCategoryName(Map<String, dynamic> t) {
+    final name = t['category_name'] as String?;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    final rawId = t['category_id'];
+    if (rawId != null) {
+      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
+      if (id != null) {
+        final match = expenseCategories.firstWhere(
+          (c) => c['id'] == id,
+          orElse: () => {},
+        );
+        final resolved = match['name'] as String?;
+        if (resolved != null) return resolved;
+      }
+    }
+    return 'Other';
   }
 
   Map<String, double> get _categoryTotals {
     final map = <String, double>{};
     for (final t in _filtered) {
-      final cat = (t['category_name'] as String? ?? 'Other').trim();
+      final cat = _resolveCategoryName(t);
       final raw = t['amount'];
       final amt = raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
       map[cat] = (map[cat] ?? 0) + amt;
@@ -408,9 +424,10 @@ class _WalletExpenseScreenState extends State<WalletExpenseScreen> {
                           child: _DropdownFilter(
                             value: _categoryFilter ?? 'Category',
                             items: ['Category', ..._categories],
-                            onChanged: (v) => setState(() =>
-                                _categoryFilter =
-                                    (v == 'Category') ? null : v),
+                            onChanged: (v) {
+                              setState(() => _categoryFilter = (v == 'Category') ? null : v);
+                              _load();
+                            },
                           ),
                         ),
                       ],

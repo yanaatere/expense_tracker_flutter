@@ -10,6 +10,8 @@ import 'features/auth/create_account_screen.dart';
 import 'features/onboarding/select_language_screen.dart';
 import 'features/onboarding/setup_wallet_screen.dart';
 import 'features/transactions/add_transaction_screen.dart';
+import 'features/transactions/recent_transaction_full_page.dart';
+import 'features/transactions/transaction_detail_screen.dart';
 import 'features/wallet/wallet_screen.dart';
 import 'features/wallet/wallet_detail_screen.dart';
 import 'features/wallet/wallet_edit_screen.dart';
@@ -197,6 +199,17 @@ final _router = GoRouter(
     GoRoute(
       path: '/add-transaction',
       builder: (context, state) => const AddTransactionScreen(),
+    ),
+    GoRoute(
+      path: '/transactions/recent',
+      builder: (context, state) => const RecentTransactionFullPage(),
+    ),
+    GoRoute(
+      path: '/transactions/detail',
+      builder: (context, state) {
+        final data = state.extra as Map<String, dynamic>;
+        return TransactionDetailScreen(data: data);
+      },
     ),
   ],
 );

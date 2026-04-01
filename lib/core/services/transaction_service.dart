@@ -49,6 +49,22 @@ class TransactionService {
     return data['url'] as String;
   }
 
+  /// Delete a previously uploaded receipt by its public URL.
+  static Future<void> deleteReceipt(String url) async {
+    final objectName = Uri.parse(url).pathSegments.last;
+    await _dio.delete('/api/uploads/receipts/$objectName');
+  }
+
+  static Future<Map<String, dynamic>> getTransaction(int id) async {
+    final response = await _dio.get('/api/transactions/$id');
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
+  }
+
+  static Future<void> deleteTransaction(int id) async {
+    await _dio.delete('/api/transactions/$id');
+  }
+
   static Future<Map<String, dynamic>> createTransaction({
     required String type,
     required double amount,

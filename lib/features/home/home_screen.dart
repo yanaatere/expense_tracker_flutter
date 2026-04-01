@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/category_definitions.dart';
 import '../../core/services/transaction_service.dart';
 import '../../core/storage/local_storage.dart';
 
@@ -17,10 +18,12 @@ import '../../core/storage/local_storage.dart';
 class _Transaction {
   final String title;
   final String category;
+  final String type;
   final double amount;
   final DateTime date;
+  final Map<String, dynamic> rawData;
 
-  const _Transaction(this.title, this.category, this.amount, this.date);
+  _Transaction(this.title, this.category, this.type, this.amount, this.date, this.rawData);
 
   factory _Transaction.fromApi(Map<String, dynamic> map) {
     final type = map['type'] as String? ?? 'expense';
@@ -28,7 +31,19 @@ class _Transaction {
     double amount = raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
     if (type == 'expense') amount = -amount.abs();
 
-    final categoryName = map['category_name'] as String? ?? '';
+    // Resolve category name from category_id using local definitions
+    // (the API does not return category_name; categories table was dropped)
+    String categoryName = '';
+    final rawId = map['category_id'];
+    if (rawId != null) {
+      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
+      if (id != null) {
+        final cats = localCategories(type: type);
+        final match = cats.firstWhere((c) => c['id'] == id, orElse: () => {});
+        categoryName = match['name'] as String? ?? '';
+      }
+    }
+
     final dateStr = map['transaction_date'] as String? ?? '';
     DateTime date;
     try {
@@ -40,8 +55,10 @@ class _Transaction {
     return _Transaction(
       map['description'] as String? ?? '',
       categoryName,
+      type,
       amount,
       date,
+      map,
     );
   }
 }
@@ -505,10 +522,12 @@ class _RecentTransactionSection extends StatelessWidget {
   final List<_Transaction> transactions;
   final bool isLoading;
   final String? error;
+  final VoidCallback? onTransactionChanged;
   const _RecentTransactionSection({
     required this.transactions,
     this.isLoading = false,
     this.error,
+    this.onTransactionChanged,
   });
 
   @override
@@ -543,7 +562,7 @@ class _RecentTransactionSection extends StatelessWidget {
               ),
             ),
             GestureDetector(
-              onTap: () {},
+              onTap: () => context.push('/transactions/recent'),
               child: Text(
                 'See More',
                 style: GoogleFonts.urbanist(
@@ -625,17 +644,6 @@ class _TransactionRow extends StatelessWidget {
   final _Transaction transaction;
   const _TransactionRow({required this.transaction});
 
-  IconData get _icon {
-    switch (transaction.category.toLowerCase()) {
-      case 'income':   return Icons.trending_up_rounded;
-      case 'travel':   return Icons.flight_rounded;
-      case 'charity':  return Icons.favorite_rounded;
-      case 'business': return Icons.work_rounded;
-      case 'internet': return Icons.language_rounded;
-      default:         return Icons.star_rounded;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.amount > 0;
@@ -644,6 +652,7 @@ class _TransactionRow extends StatelessWidget {
     final amountStr = isIncome ? '+Rp. $formatted' : '-Rp. $formatted';
     final dateStr = DateFormat('d MMMM yyyy').format(transaction.date);
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
+    final iconPath = categoryIconPath(transaction.category, type: transaction.type);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -657,7 +666,14 @@ class _TransactionRow extends StatelessWidget {
               color: AppColors.cardBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(_icon, size: 18, color: AppColors.primary),
+            padding: const EdgeInsets.all(8),
+            child: iconPath != null
+                ? Image.asset(iconPath)
+                : Icon(
+                    isIncome ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                    size: 18,
+                    color: amountColor,
+                  ),
           ),
           const SizedBox(width: 12),
           // Title + date
