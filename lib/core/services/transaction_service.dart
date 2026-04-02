@@ -92,8 +92,8 @@ class TransactionService {
       'category_id': ?categoryId,
       'sub_category_id': ?subCategoryId,
       'wallet_id': ?walletId,
-      if (date != null) 'date': date,
-      if (receiptImageUrl != null) 'receipt_image_url': receiptImageUrl,
+      'date': ?date,
+      'receipt_image_url': ?receiptImageUrl,
     });
     final envelope = response.data as Map<String, dynamic>;
     return envelope['data'] as Map<String, dynamic>;
