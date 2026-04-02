@@ -37,6 +37,7 @@ flutter:
     - assets/images/background.webp
     - assets/images/backdrop_wallets/
     - assets/icons/
+    - assets/icons/accountinfo/
     - assets/icons/wallets/
     - assets/icons/wallets/wallet_transaction/
     - assets/icons/Income/Category/

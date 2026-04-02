@@ -8,6 +8,17 @@ class ApiClient {
     defaultValue: 'http://localhost:3000',
   );
 
+  // Prevent shipping a localhost URL in a release build. Always pass
+  // --dart-define=API_BASE_URL=https://... when building for production.
+  static void _assertProductionUrl() {
+    if (!kDebugMode && (_baseUrl.contains('localhost') || _baseUrl.contains('127.0.0.1'))) {
+      throw StateError(
+        'API_BASE_URL points to localhost in a release build. '
+        'Pass --dart-define=API_BASE_URL=https://your-api.example.com',
+      );
+    }
+  }
+
   /// Called when the server returns 401. Wire this up in app.dart to
   /// clear local state and navigate to /signin.
   static VoidCallback? onUnauthorized;
@@ -30,6 +41,7 @@ class ApiClient {
   }
 
   static Dio _buildDio() {
+    _assertProductionUrl();
     final d = Dio(
       BaseOptions(
         baseUrl: _baseUrl,

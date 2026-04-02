@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../database/daos/auth_cache_dao.dart';
 import '../database/daos/sync_queue_dao.dart';
@@ -60,7 +61,9 @@ class AuthRepositoryImpl implements AuthRepository {
             tokenSavedAt: DateTime.now().millisecondsSinceEpoch,
             syncedAt: DateTime.now().millisecondsSinceEpoch,
           ));
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[AuthRepository] Failed to cache credentials: $e');
+        }
         return AuthResult.online(token: token, username: username);
       } on DioException catch (e) {
         return AuthResult.failure(AuthService.errorMessage(e));
@@ -112,7 +115,9 @@ class AuthRepositoryImpl implements AuthRepository {
             tokenSavedAt: DateTime.now().millisecondsSinceEpoch,
             syncedAt: DateTime.now().millisecondsSinceEpoch,
           ));
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[AuthRepository] Failed to cache credentials after register: $e');
+        }
         if (data['token'] != null) {
           await LocalStorage.saveToken(data['token'] as String);
         }

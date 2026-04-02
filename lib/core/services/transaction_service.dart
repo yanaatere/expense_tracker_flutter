@@ -52,6 +52,9 @@ class TransactionService {
   /// Delete a previously uploaded receipt by its public URL.
   static Future<void> deleteReceipt(String url) async {
     final objectName = Uri.parse(url).pathSegments.last;
+    if (!RegExp(r'^[\w\-.]+$').hasMatch(objectName)) {
+      throw ArgumentError('Invalid receipt object name: $objectName');
+    }
     await _dio.delete('/api/uploads/receipts/$objectName');
   }
 
@@ -61,8 +64,39 @@ class TransactionService {
     return envelope['data'] as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> getHomeSummary() async {
+    final response = await _dio.get('/api/home/summary');
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
+  }
+
   static Future<void> deleteTransaction(int id) async {
     await _dio.delete('/api/transactions/$id');
+  }
+
+  static Future<Map<String, dynamic>> updateTransaction({
+    required int id,
+    required String type,
+    required double amount,
+    String? description,
+    int? categoryId,
+    int? subCategoryId,
+    int? walletId,
+    String? date,
+    String? receiptImageUrl,
+  }) async {
+    final response = await _dio.put('/api/transactions/$id', data: {
+      'type': type,
+      'amount': amount,
+      if (description != null && description.isNotEmpty) 'description': description,
+      'category_id': ?categoryId,
+      'sub_category_id': ?subCategoryId,
+      'wallet_id': ?walletId,
+      if (date != null) 'date': date,
+      if (receiptImageUrl != null) 'receipt_image_url': receiptImageUrl,
+    });
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> createTransaction({

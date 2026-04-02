@@ -420,9 +420,9 @@ class _WalletIncomeScreenState extends State<WalletIncomeScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: _DropdownFilter(
-                            value: _categoryFilter ?? 'Category',
-                            items: ['Category', ..._categories],
+                          child: _CategoryDropdownFilter(
+                            selectedCategory: _categoryFilter,
+                            categories: _categories,
                             onChanged: (v) {
                               setState(() => _categoryFilter = (v == 'Category') ? null : v);
                               _load();
@@ -471,7 +471,7 @@ class _WalletIncomeScreenState extends State<WalletIncomeScreen> {
                         child: Column(
                           children: [
                             for (int i = 0; i < _filtered.length; i++) ...[
-                              _IncomeTxRow(data: _filtered[i], onDeleted: _load),
+                              _IncomeTxRow(data: _filtered[i], onDeleted: _load, currency: widget.wallet.currency),
                               if (i < _filtered.length - 1)
                                 Divider(
                                   height: 1,
@@ -737,12 +737,116 @@ class _DropdownFilter extends StatelessWidget {
   }
 }
 
+// ── Category dropdown with icons ──────────────────────────────────────────────
+
+class _CategoryDropdownFilter extends StatelessWidget {
+  final String? selectedCategory;
+  final List<String> categories;
+  final ValueChanged<String?> onChanged;
+
+  const _CategoryDropdownFilter({
+    required this.selectedCategory,
+    required this.categories,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = selectedCategory ?? 'Category';
+    final allItems = ['Category', ...categories];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: DropdownButton<String>(
+        value: allItems.contains(value) ? value : allItems.first,
+        items: allItems.map((e) {
+          final iconPath = e == 'Category'
+              ? null
+              : categoryIconPath(e, type: 'income');
+          return DropdownMenuItem(
+            value: e,
+            child: Row(
+              children: [
+                if (iconPath != null) ...[
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Image.asset(iconPath),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(e,
+                    style: GoogleFonts.urbanist(
+                        fontSize: 13, color: AppColors.labelText)),
+              ],
+            ),
+          );
+        }).toList(),
+        selectedItemBuilder: (context) => allItems.map((e) {
+          final iconPath = e == 'Category'
+              ? null
+              : categoryIconPath(e, type: 'income');
+          return Row(
+            children: [
+              if (iconPath != null) ...[
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: Image.asset(iconPath),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  e,
+                  style: GoogleFonts.urbanist(
+                      fontSize: 13, color: AppColors.labelText),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+        onChanged: onChanged,
+        isExpanded: true,
+        underline: const SizedBox(),
+        isDense: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.placeholderText, size: 18),
+        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+      ),
+    );
+  }
+}
+
 // ── Income transaction row ────────────────────────────────────────────────────
 
 class _IncomeTxRow extends StatelessWidget {
   final Map<String, dynamic> data;
   final VoidCallback? onDeleted;
-  const _IncomeTxRow({required this.data, this.onDeleted});
+  final String currency;
+  const _IncomeTxRow({required this.data, this.onDeleted, required this.currency});
+
+  String _resolveCategoryName() {
+    final name = data['category_name'] as String?;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    final rawId = data['category_id'];
+    if (rawId != null) {
+      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
+      if (id != null) {
+        final match = incomeCategories.firstWhere(
+          (c) => c['id'] == id,
+          orElse: () => {},
+        );
+        final resolved = match['name'] as String?;
+        if (resolved != null) return resolved;
+      }
+    }
+    return 'Other';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -758,8 +862,9 @@ class _IncomeTxRow extends StatelessWidget {
     } catch (_) {
       date = DateTime.now();
     }
-    final formatted = NumberFormat('#,##0.##').format(amount);
     final dateLabel = DateFormat('d MMMM yyyy').format(date);
+    final categoryName = _resolveCategoryName();
+    final iconPath = categoryIconPath(categoryName, type: 'income');
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -782,10 +887,12 @@ class _IncomeTxRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(10),
-              child: Image.asset(
-                'assets/icons/wallets/wallet_transaction/up.webp',
-                color: AppColors.income,
-              ),
+              child: iconPath != null
+                  ? Image.asset(iconPath)
+                  : Image.asset(
+                      'assets/icons/wallets/wallet_transaction/up.webp',
+                      color: AppColors.income,
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -805,7 +912,7 @@ class _IncomeTxRow extends StatelessWidget {
               ),
             ),
             Text(
-              '+\$$formatted',
+              '+${formatCurrency(amount, currency)}',
               style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,

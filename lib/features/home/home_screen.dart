@@ -74,7 +74,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _username = 'User';
   bool _isScrolled = false;
   late final ScrollController _scrollController;
@@ -82,6 +82,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<_Transaction> _transactions = [];
   bool _loadingTransactions = true;
   String? _transactionError;
+
+  Map<String, dynamic>? _homeSummary;
+  bool _loadingSummary = true;
 
   @override
   void initState() {
@@ -93,11 +96,36 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     _loadUser();
     _loadTransactions();
+    _loadHomeSummary();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshAll();
+    }
   }
 
   Future<void> _loadUser() async {
     final username = await LocalStorage.getUsername();
     if (mounted) setState(() => _username = username ?? 'User');
+  }
+
+  Future<void> _refreshAll() => Future.wait([_loadTransactions(), _loadHomeSummary()]);
+
+  Future<void> _loadHomeSummary() async {
+    try {
+      final data = await TransactionService.getHomeSummary();
+      if (!mounted) return;
+      setState(() {
+        _homeSummary = data;
+        _loadingSummary = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingSummary = false);
+    }
   }
 
   Future<void> _loadTransactions() async {
@@ -119,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }
@@ -135,10 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       extendBody: true,
-      bottomNavigationBar: _GlassBottomNav(onAddTransaction: _loadTransactions),
+      bottomNavigationBar: _GlassBottomNav(onAddTransaction: _refreshAll),
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: () => Future.wait([_loadUser(), _loadTransactions()]),
+        onRefresh: () => Future.wait([_loadUser(), _refreshAll()]),
         child: CustomScrollView(
         controller: _scrollController,
         slivers: [
@@ -162,7 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: _TotalExpenseCard(),
+              child: _TotalExpenseCard(
+                summary: _homeSummary,
+                isLoading: _loadingSummary,
+              ),
             ),
           ),
 
@@ -170,7 +202,10 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _BalanceIncomeCard(),
+              child: _BalanceIncomeCard(
+                summary: _homeSummary,
+                isLoading: _loadingSummary,
+              ),
             ),
           ),
 
@@ -178,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _QuickActions(onWalletReturn: _loadTransactions),
+              child: _QuickActions(onWalletReturn: _refreshAll),
             ),
           ),
 
@@ -190,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 transactions: _transactions,
                 isLoading: _loadingTransactions,
                 error: _transactionError,
-                onTransactionChanged: _loadTransactions,
+                onTransactionChanged: _refreshAll,
               ),
             ),
           ),
@@ -259,10 +294,13 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.cardBg,
-                child: const Icon(Icons.person, color: AppColors.primary, size: 24),
+              GestureDetector(
+                onTap: () => context.push('/account'),
+                child: const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppColors.cardBg,
+                  child: Icon(Icons.person, color: AppColors.primary, size: 24),
+                ),
               ),
             ],
           ),
@@ -277,11 +315,20 @@ class _Header extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TotalExpenseCard extends StatelessWidget {
+  final Map<String, dynamic>? summary;
+  final bool isLoading;
+
+  const _TotalExpenseCard({this.summary, this.isLoading = false});
+
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final monthYear = DateFormat('MMMM yyyy').format(now);
     final currency = NumberFormat.currency(symbol: 'Rp. ', decimalDigits: 0);
+    final monthLabel = summary?['current_month_label'] as String? ?? DateFormat('MMMM yyyy').format(DateTime.now());
+    final totalExpense = (summary?['total_expense'] as num?)?.toDouble() ?? 0;
+    final prevExpense = (summary?['prev_month_expense'] as num?)?.toDouble() ?? 0;
+    final pctChange = (summary?['expense_percent_change'] as num?)?.toDouble() ?? 0;
+    final pctLabel = '${pctChange >= 0 ? '+' : ''}${pctChange.toStringAsFixed(0)}%';
+    final pctPositive = pctChange >= 0;
 
     return Container(
       width: double.infinity,
@@ -297,58 +344,63 @@ class _TotalExpenseCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Total Expense In $monthYear',
-            style: GoogleFonts.urbanist(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.placeholderText,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                currency.format(12000000),
-                style: GoogleFonts.urbanist(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.labelText,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE4E6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '+27%',
+      child: isLoading
+          ? const SizedBox(
+              height: 72,
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total Expense In $monthLabel',
                   style: GoogleFonts.urbanist(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.expense,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.placeholderText,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${currency.format(2123999)} of Last Month',
-            style: GoogleFonts.urbanist(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: AppColors.placeholderText,
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      currency.format(totalExpense),
+                      style: GoogleFonts.urbanist(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.labelText,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: pctPositive ? const Color(0xFFFFE4E6) : const Color(0xFFE4FFE8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        pctLabel,
+                        style: GoogleFonts.urbanist(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: pctPositive ? AppColors.expense : AppColors.income,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${currency.format(prevExpense)} of Last Month',
+                  style: GoogleFonts.urbanist(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.placeholderText,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -358,9 +410,16 @@ class _TotalExpenseCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _BalanceIncomeCard extends StatelessWidget {
+  final Map<String, dynamic>? summary;
+  final bool isLoading;
+
+  const _BalanceIncomeCard({this.summary, this.isLoading = false});
+
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(symbol: 'Rp. ', decimalDigits: 0);
+    final totalBalance = (summary?['total_balance'] as num?)?.toDouble() ?? 0;
+    final totalIncome = (summary?['total_income'] as num?)?.toDouble() ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -368,29 +427,34 @@ class _BalanceIncomeCard extends StatelessWidget {
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Expanded(child: _StatColumn(
-              icon: Icons.account_balance_wallet,
-              label: 'Total Balance',
-              amount: currency.format(13000000),
-              amountColor: AppColors.labelText,
-            )),
-            VerticalDivider(
-              color: AppColors.primary.withAlpha(51),
-              thickness: 1,
-              width: 32,
+      child: isLoading
+          ? const SizedBox(
+              height: 56,
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
+            )
+          : IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(child: _StatColumn(
+                    icon: Icons.account_balance_wallet,
+                    label: 'Total Balance',
+                    amount: currency.format(totalBalance),
+                    amountColor: AppColors.labelText,
+                  )),
+                  VerticalDivider(
+                    color: AppColors.primary.withAlpha(51),
+                    thickness: 1,
+                    width: 32,
+                  ),
+                  Expanded(child: _StatColumn(
+                    icon: Icons.trending_up,
+                    label: 'Total Income',
+                    amount: currency.format(totalIncome),
+                    amountColor: AppColors.income,
+                  )),
+                ],
+              ),
             ),
-            Expanded(child: _StatColumn(
-              icon: Icons.trending_up,
-              label: 'Total Income',
-              amount: currency.format(25000000),
-              amountColor: AppColors.income,
-            )),
-          ],
-        ),
-      ),
     );
   }
 }

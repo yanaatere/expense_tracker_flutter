@@ -391,7 +391,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           ),
                           elevation: 0,
                         ),
-                        onPressed: () => context.push('/add-transaction'),
+                        onPressed: () async {
+                          final updated = await context.push<bool>(
+                            '/transactions/edit',
+                            extra: _data,
+                          );
+                          if (updated == true && mounted) {
+                            context.pop(true);
+                          }
+                        },
                       ),
                     ),
                   ),

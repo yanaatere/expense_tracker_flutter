@@ -10,6 +10,7 @@ import 'features/auth/create_account_screen.dart';
 import 'features/onboarding/select_language_screen.dart';
 import 'features/onboarding/setup_wallet_screen.dart';
 import 'features/transactions/add_transaction_screen.dart';
+import 'features/transactions/edit_transaction_screen.dart';
 import 'features/transactions/recent_transaction_full_page.dart';
 import 'features/transactions/transaction_detail_screen.dart';
 import 'features/wallet/wallet_screen.dart';
@@ -21,7 +22,12 @@ import 'features/wallet/wallet_income_screen.dart';
 import 'features/wallet/wallet_transaction_screen.dart';
 import 'service_locator.dart';
 import 'features/auth/sign_in_screen.dart';
+import 'features/auth/pin_login_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/account/account_info_screen.dart';
+import 'features/account/activate_pin_screen.dart';
+import 'features/account/edit_profile_screen.dart';
+import 'features/account/pin_setup_screen.dart';
 import 'features/welcome/welcome_screen.dart';
 
 class MonexApp extends StatefulWidget {
@@ -32,6 +38,9 @@ class MonexApp extends StatefulWidget {
 }
 
 class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
+  // Guard against concurrent session-expiry checks (router redirect + resume).
+  bool _checkingExpiry = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,10 +69,21 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
   }
 
   Future<void> _checkSessionExpiry() async {
-    final expired = await LocalStorage.isSessionExpired();
-    if (expired) {
-      await LocalStorage.clearAll();
-      _router.go('/signin');
+    if (_checkingExpiry) return;
+    _checkingExpiry = true;
+    try {
+      final expired = await LocalStorage.isSessionExpired();
+      if (expired) {
+        if (await LocalStorage.isPinEnabled()) {
+          await LocalStorage.clearLastActiveAt();
+          _router.go('/pin-login');
+        } else {
+          await LocalStorage.clearAll();
+          _router.go('/signin');
+        }
+      }
+    } finally {
+      _checkingExpiry = false;
     }
   }
 
@@ -109,6 +129,11 @@ final _router = GoRouter(
 
     // Session expired after being killed in background
     if (await LocalStorage.isSessionExpired()) {
+      if (await LocalStorage.isPinEnabled()) {
+        await LocalStorage.clearLastActiveAt();
+        if (loc == '/pin-login') return null;
+        return '/pin-login';
+      }
       await LocalStorage.clearAll();
       return '/signin';
     }
@@ -157,44 +182,70 @@ final _router = GoRouter(
     GoRoute(
       path: '/wallet/detail',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletDetailScreen(wallet: wallet);
       },
     ),
     GoRoute(
       path: '/wallet/edit',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletEditScreen(wallet: wallet);
       },
     ),
     GoRoute(
       path: '/wallet/info',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletInfoScreen(wallet: wallet);
       },
     ),
     GoRoute(
       path: '/wallet/transactions',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletTransactionScreen(wallet: wallet);
       },
     ),
     GoRoute(
       path: '/wallet/income',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletIncomeScreen(wallet: wallet);
       },
     ),
     GoRoute(
       path: '/wallet/expense',
       builder: (context, state) {
-        final wallet = state.extra as Wallet;
+        final wallet = state.extra as Wallet?;
+        if (wallet == null) return const WalletScreen();
         return WalletExpenseScreen(wallet: wallet);
       },
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (context, state) => const AccountInfoScreen(),
+    ),
+    GoRoute(
+      path: '/account/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/account/pin',
+      builder: (context, state) => const ActivatePinScreen(),
+    ),
+    GoRoute(
+      path: '/pin-setup',
+      builder: (context, state) => const PinSetupScreen(),
+    ),
+    GoRoute(
+      path: '/pin-login',
+      builder: (context, state) => const PinLoginScreen(),
     ),
     GoRoute(
       path: '/add-transaction',
@@ -207,8 +258,17 @@ final _router = GoRouter(
     GoRoute(
       path: '/transactions/detail',
       builder: (context, state) {
-        final data = state.extra as Map<String, dynamic>;
+        final data = state.extra as Map<String, dynamic>?;
+        if (data == null) return const HomeScreen();
         return TransactionDetailScreen(data: data);
+      },
+    ),
+    GoRoute(
+      path: '/transactions/edit',
+      builder: (context, state) {
+        final data = state.extra as Map<String, dynamic>?;
+        if (data == null) return const HomeScreen();
+        return EditTransactionScreen(data: data);
       },
     ),
   ],

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'core/database/app_database.dart';
 import 'core/database/daos/auth_cache_dao.dart';
@@ -18,6 +20,7 @@ class ServiceLocator {
   static late AuthRepository authRepository;
   static late WalletRepository walletRepository;
   static late ValueNotifier<Locale> localeNotifier;
+  static StreamSubscription<bool>? _connectivitySubscription;
 
   static Future<void> setup() async {
     await LocalStorage.clearStaleKeychainIfNeeded();
@@ -53,8 +56,13 @@ class ServiceLocator {
       connectivity: connectivity,
     );
 
-    connectivity.onConnectivityChanged.listen((online) {
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen((online) {
       if (online) syncService.processQueue();
     });
+  }
+
+  static Future<void> dispose() async {
+    await _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
   }
 }

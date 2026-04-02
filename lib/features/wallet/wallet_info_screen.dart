@@ -329,7 +329,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                           : ListView.builder(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               itemCount: _transactions.length,
-                              itemBuilder: (_, i) => _TransactionItem(data: _transactions[i]),
+                              itemBuilder: (_, i) => _TransactionItem(data: _transactions[i], currency: widget.wallet.currency),
                             ),
             ),
 
@@ -451,7 +451,8 @@ class _FilterTab extends StatelessWidget {
 
 class _TransactionItem extends StatelessWidget {
   final Map<String, dynamic> data;
-  const _TransactionItem({required this.data});
+  final String currency;
+  const _TransactionItem({required this.data, required this.currency});
 
   @override
   Widget build(BuildContext context) {
@@ -463,8 +464,8 @@ class _TransactionItem extends StatelessWidget {
     final isIncome = type == 'income';
 
     final amountText = isIncome
-        ? '+\$${NumberFormat('#,##0.##').format(amount)}'
-        : '-\$${NumberFormat('#,##0.##').format(amount)}';
+        ? '+${formatCurrency(amount, currency)}'
+        : '-${formatCurrency(amount, currency)}';
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
 
     String formattedDate = dateStr;

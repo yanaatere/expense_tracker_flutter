@@ -47,12 +47,19 @@ class _SignInScreenState extends State<SignInScreen>
     super.dispose();
   }
 
+  static final _emailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$');
+
   Future<void> _handleSignIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Please fill in all fields');
+      return;
+    }
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _errorMessage = 'Please enter a valid email address');
       return;
     }
 

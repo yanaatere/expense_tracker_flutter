@@ -122,6 +122,13 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
   }
 
   Future<void> _save() async {
+    final balanceText = _balanceController.text.trim();
+    final balance = balanceText.isEmpty ? 0.0 : double.tryParse(balanceText);
+    if (balance == null || balance < 0) {
+      setState(() => _error = 'Please enter a valid balance (0 or more)');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -131,7 +138,7 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
         name: _effectiveName,
         type: _type,
         currency: _currency,
-        balance: double.tryParse(_balanceController.text) ?? 0,
+        balance: balance,
         goals: _goalsController.text.isNotEmpty ? _goalsController.text : null,
       );
       await LocalStorage.setOnboardingCompleted();

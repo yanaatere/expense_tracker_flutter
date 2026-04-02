@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/services/transaction_service.dart';
+import '../../core/utils/currency_formatter.dart';
 
 // ---------------------------------------------------------------------------
 // Transaction model
@@ -812,8 +813,7 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = transaction.amount > 0;
     final amt = transaction.amount.abs();
-    final formatted = NumberFormat('#,##0', 'en_US').format(amt);
-    final amountStr = isIncome ? '+\$$formatted' : '-\$$formatted';
+    final amountStr = isIncome ? '+${formatCurrency(amt, 'IDR')}' : '-${formatCurrency(amt, 'IDR')}';
     final dateStr = DateFormat('d MMMM yyyy').format(transaction.date);
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
     final iconPath =

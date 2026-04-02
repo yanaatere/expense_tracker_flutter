@@ -5,11 +5,14 @@ class LocalStorage {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   static const _usernameKey = 'username';
+  static const _emailKey = 'email';
   static const _localeKey = 'locale';
   static const _onboardingKey = 'onboarding_completed';
   static const _lastActiveKey = 'last_active_at';
   static const _appInstalledKey = 'app_installed';
-  static const sessionTimeout = Duration(minutes: 1);
+  static const _pinKey = 'user_pin';
+  static const _pinEnabledKey = 'pin_enabled';
+  static const sessionTimeout = Duration(minutes: 5);
 
   // ── Token (secure storage) ──────────────────────────────────────────────────
 
@@ -30,6 +33,18 @@ class LocalStorage {
   static Future<String?> getUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_usernameKey);
+  }
+
+  // ── Email (shared prefs) ────────────────────────────────────────────────────
+
+  static Future<void> saveEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_emailKey, email);
+  }
+
+  static Future<String?> getEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_emailKey);
   }
 
   // ── Locale (shared prefs) ───────────────────────────────────────────────────
@@ -90,13 +105,33 @@ class LocalStorage {
     await prefs.remove(_lastActiveKey);
   }
 
+  // ── PIN (secure storage) ────────────────────────────────────────────────────
+
+  static Future<void> savePin(String pin) => _storage.write(key: _pinKey, value: pin);
+  static Future<String?> getPin() => _storage.read(key: _pinKey);
+  static Future<void> clearPin() => _storage.delete(key: _pinKey);
+
+  // ── PIN enabled flag (shared prefs) ─────────────────────────────────────────
+
+  static Future<void> setPinEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_pinEnabledKey, enabled);
+  }
+
+  static Future<bool> isPinEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_pinEnabledKey) ?? false;
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
 
   static Future<void> clearAll() async {
     await clearToken();
+    await clearPin();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_usernameKey);
     await prefs.remove(_onboardingKey);
     await prefs.remove(_lastActiveKey);
+    await prefs.remove(_pinEnabledKey);
   }
 }

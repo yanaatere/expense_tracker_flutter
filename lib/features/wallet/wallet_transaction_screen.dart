@@ -4,15 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/category_definitions.dart';
 import '../../core/models/wallet.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
 import '../../shared/widgets/wallet_card.dart';
-
-String _txIconAsset(String type) {
-  if (type == 'income') return 'assets/icons/wallets/wallet_transaction/up.webp';
-  return 'assets/icons/wallets/wallet_transaction/bottom.webp';
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -282,7 +279,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                         child: Column(
                           children: [
                             for (int i = 0; i < _filtered.length; i++) ...[
-                              _TxRow(data: _filtered[i]),
+                              _TxRow(data: _filtered[i], currency: _wallet.currency),
                               if (i < _filtered.length - 1)
                                 Divider(
                                   height: 1,
@@ -359,7 +356,24 @@ class _FilterTab extends StatelessWidget {
 
 class _TxRow extends StatelessWidget {
   final Map<String, dynamic> data;
-  const _TxRow({required this.data});
+  final String currency;
+  const _TxRow({required this.data, required this.currency});
+
+  String _resolveCategoryName(String type) {
+    final name = data['category_name'] as String?;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    final rawId = data['category_id'];
+    if (rawId != null) {
+      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
+      if (id != null) {
+        final list = type == 'income' ? incomeCategories : expenseCategories;
+        final match = list.firstWhere((c) => c['id'] == id, orElse: () => {});
+        final resolved = match['name'] as String?;
+        if (resolved != null) return resolved;
+      }
+    }
+    return 'Other';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -376,10 +390,14 @@ class _TxRow extends StatelessWidget {
     } catch (_) {
       date = DateTime.now();
     }
-    final formatted = NumberFormat('#,##0.##').format(amount);
-    final amountStr = isIncome ? '+\$$formatted' : '-\$$formatted';
+    final amountStr = isIncome ? '+${formatCurrency(amount, currency)}' : '-${formatCurrency(amount, currency)}';
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
     final dateLabel = DateFormat('d MMMM yyyy').format(date);
+    final categoryName = _resolveCategoryName(type);
+    final iconPath = categoryIconPath(categoryName, type: type);
+    final fallbackAsset = isIncome
+        ? 'assets/icons/wallets/wallet_transaction/up.webp'
+        : 'assets/icons/wallets/wallet_transaction/bottom.webp';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -394,10 +412,12 @@ class _TxRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(10),
-            child: Image.asset(
-              _txIconAsset(type),
-              color: isIncome ? AppColors.income : AppColors.placeholderText,
-            ),
+            child: iconPath != null
+                ? Image.asset(iconPath)
+                : Image.asset(
+                    fallbackAsset,
+                    color: isIncome ? AppColors.income : AppColors.placeholderText,
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../database/daos/auth_cache_dao.dart';
 import '../database/daos/sync_queue_dao.dart';
@@ -57,8 +58,8 @@ class WalletRepositoryImpl implements WalletRepository {
         final wallets = remote.map((m) => _fromApiMap(m, userId)).toList();
         _walletDao.upsertAll(wallets);
         return wallets;
-      } catch (_) {
-        // Fall through to local cache
+      } catch (e) {
+        debugPrint('[WalletRepository] Remote fetch failed, using local cache: $e');
       }
     }
 

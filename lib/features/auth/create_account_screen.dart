@@ -53,17 +53,29 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
     super.dispose();
   }
 
+  static final _emailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$');
+
   Future<void> _handleCreateAccount() async {
+    final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
+    if (_nameController.text.trim().isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please fill in all fields');
+      return;
+    }
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _errorMessage = 'Please enter a valid email address');
+      return;
+    }
     if (password != confirm) {
       setState(() => _errorMessage = 'Passwords do not match');
       return;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setState(
-          () => _errorMessage = 'Password must be at least 6 characters');
+          () => _errorMessage = 'Password must be at least 8 characters');
       return;
     }
 
