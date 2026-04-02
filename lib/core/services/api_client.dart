@@ -14,6 +14,21 @@ class ApiClient {
 
   static final Dio dio = _buildDio();
 
+  /// Replaces `localhost` in a media URL with the same host as [_baseUrl].
+  ///
+  /// The backend stores MinIO URLs as `http://localhost:9000/...`. On an
+  /// Android emulator `localhost` resolves to the device itself, not the dev
+  /// machine.  By swapping the host to match the API base URL we ensure media
+  /// loads correctly on every platform.
+  static String resolveMediaUrl(String url) {
+    if (url.isEmpty) return url;
+    final mediaUri = Uri.tryParse(url);
+    if (mediaUri == null || mediaUri.host != 'localhost') return url;
+    final apiUri = Uri.tryParse(_baseUrl);
+    if (apiUri == null) return url;
+    return mediaUri.replace(host: apiUri.host).toString();
+  }
+
   static Dio _buildDio() {
     final d = Dio(
       BaseOptions(

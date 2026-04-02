@@ -18,14 +18,16 @@ class _Transaction {
   final double amount;
   final DateTime date;
   final int? categoryId;
+  final Map<String, dynamic> rawData;
 
-  const _Transaction(
+  _Transaction(
     this.title,
     this.category,
     this.type,
     this.amount,
     this.date,
     this.categoryId,
+    this.rawData,
   );
 
   factory _Transaction.fromApi(Map<String, dynamic> map) {
@@ -62,6 +64,7 @@ class _Transaction {
       amount,
       date,
       categoryId,
+      map,
     );
   }
 }
@@ -369,8 +372,10 @@ class _RecentTransactionFullPageState
                                 endIndent: 0,
                                 color: AppColors.inputBorder.withAlpha(180),
                               ),
-                              itemBuilder: (_, i) =>
-                                  _TransactionRow(transaction: txns[i]),
+                              itemBuilder: (_, i) => _TransactionRow(
+                                transaction: txns[i],
+                                onDeleted: _loadTransactions,
+                              ),
                             ),
                           ),
           ),
@@ -800,7 +805,8 @@ class _CategoryPickerSheet extends StatelessWidget {
 
 class _TransactionRow extends StatelessWidget {
   final _Transaction transaction;
-  const _TransactionRow({required this.transaction});
+  final VoidCallback? onDeleted;
+  const _TransactionRow({required this.transaction, this.onDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -813,7 +819,16 @@ class _TransactionRow extends StatelessWidget {
     final iconPath =
         categoryIconPath(transaction.category, type: transaction.type);
 
-    return Padding(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () async {
+        final deleted = await context.push<bool>(
+          '/transactions/detail',
+          extra: transaction.rawData,
+        );
+        if (deleted == true) onDeleted?.call();
+      },
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
       child: Row(
         children: [
@@ -874,6 +889,7 @@ class _TransactionRow extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

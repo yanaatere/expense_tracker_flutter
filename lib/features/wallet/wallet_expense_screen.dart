@@ -472,7 +472,7 @@ class _WalletExpenseScreenState extends State<WalletExpenseScreen> {
                         child: Column(
                           children: [
                             for (int i = 0; i < _filtered.length; i++) ...[
-                              _ExpenseTxRow(data: _filtered[i]),
+                              _ExpenseTxRow(data: _filtered[i], onDeleted: _load),
                               if (i < _filtered.length - 1)
                                 Divider(
                                   height: 1,
@@ -736,7 +736,8 @@ class _DropdownFilter extends StatelessWidget {
 
 class _ExpenseTxRow extends StatelessWidget {
   final Map<String, dynamic> data;
-  const _ExpenseTxRow({required this.data});
+  final VoidCallback? onDeleted;
+  const _ExpenseTxRow({required this.data, this.onDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -755,48 +756,58 @@ class _ExpenseTxRow extends StatelessWidget {
     final formatted = NumberFormat('#,##0.##').format(amount);
     final dateLabel = DateFormat('d MMMM yyyy').format(date);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.cardBg,
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () async {
+        final deleted = await context.push<bool>(
+          '/transactions/detail',
+          extra: data,
+        );
+        if (deleted == true) onDeleted?.call();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(10),
+              child: Image.asset(
+                'assets/icons/wallets/wallet_transaction/bottom.webp',
+                color: AppColors.expense,
+              ),
             ),
-            padding: const EdgeInsets.all(10),
-            child: Image.asset(
-              'assets/icons/wallets/wallet_transaction/bottom.webp',
-              color: AppColors.expense,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(description,
+                      style: GoogleFonts.urbanist(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.labelText)),
+                  const SizedBox(height: 2),
+                  Text(dateLabel,
+                      style: GoogleFonts.urbanist(
+                          fontSize: 12, color: AppColors.placeholderText)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(description,
-                    style: GoogleFonts.urbanist(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.labelText)),
-                const SizedBox(height: 2),
-                Text(dateLabel,
-                    style: GoogleFonts.urbanist(
-                        fontSize: 12, color: AppColors.placeholderText)),
-              ],
+            Text(
+              '-\$$formatted',
+              style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.expense),
             ),
-          ),
-          Text(
-            '-\$$formatted',
-            style: GoogleFonts.urbanist(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.expense),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

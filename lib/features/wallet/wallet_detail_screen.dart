@@ -182,6 +182,16 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                       label: 'Balance',
                       value: NumberFormat('#,##0', 'en_US').format(wallet.balance),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Time ─────────────────────────────────────────────────
+                    _InfoField(
+                      label: 'Time',
+                      value: DateFormat('HH:mm').format(
+                        DateTime.fromMillisecondsSinceEpoch(wallet.createdAt),
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -190,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 transactions: _transactions,
                 isLoading: _loadingTransactions,
                 error: _transactionError,
+                onTransactionChanged: _loadTransactions,
               ),
             ),
           ),
@@ -622,7 +623,7 @@ class _RecentTransactionSection extends StatelessWidget {
                       : Column(
                           children: [
                             for (int i = 0; i < transactions.length; i++) ...[
-                              _TransactionRow(transaction: transactions[i]),
+                              _TransactionRow(transaction: transactions[i], onDeleted: onTransactionChanged),
                               if (i < transactions.length - 1)
                                 Divider(
                                   height: 1,
@@ -642,7 +643,8 @@ class _RecentTransactionSection extends StatelessWidget {
 
 class _TransactionRow extends StatelessWidget {
   final _Transaction transaction;
-  const _TransactionRow({required this.transaction});
+  final VoidCallback? onDeleted;
+  const _TransactionRow({required this.transaction, this.onDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -654,7 +656,16 @@ class _TransactionRow extends StatelessWidget {
     final amountColor = isIncome ? AppColors.income : AppColors.expense;
     final iconPath = categoryIconPath(transaction.category, type: transaction.type);
 
-    return Padding(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () async {
+        final deleted = await context.push<bool>(
+          '/transactions/detail',
+          extra: transaction.rawData,
+        );
+        if (deleted == true) onDeleted?.call();
+      },
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
@@ -711,6 +722,7 @@ class _TransactionRow extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

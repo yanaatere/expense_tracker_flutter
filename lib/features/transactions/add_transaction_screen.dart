@@ -39,6 +39,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   File? _receiptFile;
   String? _receiptUrl;
   bool _uploadingReceipt = false;
+  bool _receiptHovered = false;
 
   @override
   void initState() {
@@ -431,63 +432,99 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: (_uploadingReceipt || _submitting) ? null : _pickReceipt,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: _receiptUrl != null
-                            ? const Color(0xFF5AC45A).withValues(alpha: 0.15)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: _uploadingReceipt
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 250),
-                                  child: Icon(
-                                    _receiptUrl != null ? Icons.check_circle_rounded : Icons.attach_file_rounded,
-                                    key: ValueKey(_receiptUrl != null),
-                                    size: 16,
-                                    color: _receiptUrl != null
-                                        ? const Color(0xFF5AC45A)
-                                        : AppColors.placeholderText,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 250),
-                                  style: GoogleFonts.urbanist(
-                                    fontSize: 13,
-                                    color: _receiptUrl != null
-                                        ? const Color(0xFF5AC45A)
-                                        : AppColors.placeholderText,
-                                  ),
-                                  child: Text(_receiptUrl != null ? 'Receipt' : 'Add'),
-                                ),
-                                if (_receiptUrl != null) ...[
-                                  const SizedBox(width: 6),
-                                  GestureDetector(
-                                    onTap: _submitting ? null : _removeReceipt,
-                                    child: const Icon(
-                                      Icons.close_rounded,
-                                      size: 14,
-                                      color: Color(0xFF5AC45A),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) {
+                      if (_receiptUrl != null) {
+                        setState(() => _receiptHovered = true);
+                      }
+                    },
+                    onExit: (_) => setState(() => _receiptHovered = false),
+                    child: GestureDetector(
+                      onTap: (_uploadingReceipt || _submitting)
+                          ? null
+                          : (_receiptUrl != null && _receiptHovered)
+                              ? _removeReceipt
+                              : (_receiptUrl == null)
+                                  ? _pickReceipt
+                                  : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: _receiptUrl != null
+                              ? (_receiptHovered
+                                  ? AppColors.expense.withValues(alpha: 0.12)
+                                  : const Color(0xFF5AC45A).withValues(alpha: 0.15))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        child: _uploadingReceipt
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Icon(
+                                      _receiptUrl != null
+                                          ? (_receiptHovered
+                                              ? Icons.delete_outline_rounded
+                                              : Icons.check_circle_rounded)
+                                          : Icons.attach_file_rounded,
+                                      key: ValueKey(
+                                        _receiptUrl != null
+                                            ? (_receiptHovered ? 'remove' : 'check')
+                                            : 'add',
+                                      ),
+                                      size: 16,
+                                      color: _receiptUrl != null
+                                          ? (_receiptHovered
+                                              ? AppColors.expense
+                                              : const Color(0xFF5AC45A))
+                                          : AppColors.placeholderText,
                                     ),
                                   ),
+                                  const SizedBox(width: 4),
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 200),
+                                    style: GoogleFonts.urbanist(
+                                      fontSize: 13,
+                                      fontWeight: _receiptHovered && _receiptUrl != null
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: _receiptUrl != null
+                                          ? (_receiptHovered
+                                              ? AppColors.expense
+                                              : const Color(0xFF5AC45A))
+                                          : AppColors.placeholderText,
+                                    ),
+                                    child: Text(
+                                      _receiptUrl != null
+                                          ? (_receiptHovered ? 'Remove' : 'Receipt')
+                                          : 'Add',
+                                    ),
+                                  ),
+                                  if (_receiptUrl != null && !_receiptHovered) ...[
+                                    const SizedBox(width: 6),
+                                    GestureDetector(
+                                      onTap: _submitting ? null : _removeReceipt,
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 14,
+                                        color: Color(0xFF5AC45A),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            ),
+                              ),
+                      ),
                     ),
                   ),
                 ],

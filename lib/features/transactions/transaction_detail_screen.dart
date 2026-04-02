@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
+import '../../core/services/api_client.dart';
 import '../../core/services/transaction_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -21,15 +22,43 @@ class TransactionDetailScreen extends StatefulWidget {
 }
 
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
+  late Map<String, dynamic> _data;
+  bool _loadingFull = false;
   bool _deleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _data = widget.data; // show passed data immediately
+    // Defer the API call until after the push animation completes so the
+    // navigation transition isn't interrupted by a mid-animation setState.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchFull());
+  }
+
+  Future<void> _fetchFull() async {
+    final rawId = _data['id'];
+    if (rawId == null) return;
+    final id = rawId is int ? rawId : int.tryParse(rawId.toString());
+    if (id == null) return;
+
+    setState(() => _loadingFull = true);
+    try {
+      final full = await TransactionService.getTransaction(id);
+      if (mounted) setState(() => _data = full);
+    } catch (_) {
+      // keep existing data on failure — no error shown to user
+    } finally {
+      if (mounted) setState(() => _loadingFull = false);
+    }
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  String get _type => widget.data['type'] as String? ?? 'expense';
+  String get _type => _data['type'] as String? ?? 'expense';
   bool get _isIncome => _type == 'income';
 
   String _resolveCategoryName() {
-    final rawId = widget.data['category_id'];
+    final rawId = _data['category_id'];
     if (rawId == null) return '';
     final id = rawId is int ? rawId : int.tryParse(rawId.toString());
     if (id == null) return '';
@@ -39,7 +68,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   String _resolveSubCategoryName() {
-    final rawId = widget.data['sub_category_id'];
+    final rawId = _data['sub_category_id'];
     if (rawId == null) return '';
     final id = rawId is int ? rawId : int.tryParse(rawId.toString());
     if (id == null) return '';
@@ -94,7 +123,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
     setState(() => _deleting = true);
     try {
-      final rawId = widget.data['id'];
+      final rawId = _data['id'];
       if (rawId != null) {
         final id = rawId is int ? rawId : int.tryParse(rawId.toString());
         if (id != null) await TransactionService.deleteTransaction(id);
@@ -114,9 +143,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = widget.data;
-
-    final rawAmount = data['amount'];
+    final rawAmount = _data['amount'];
     final double amount =
         rawAmount is num ? rawAmount.toDouble() : double.tryParse(rawAmount.toString()) ?? 0;
 
@@ -125,12 +152,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
     final categoryName = _resolveCategoryName();
     final subCategoryName = _resolveSubCategoryName();
-    final description = data['description'] as String? ?? '';
-    final walletName = data['wallet_name'] as String? ?? '';
-    final notes = data['notes'] as String? ?? '';
-    final receiptUrl = data['receipt_image_url'] as String? ?? '';
+    final description = _data['description'] as String? ?? '';
+    final walletName = _data['wallet_name'] as String? ?? '';
+    final notes = _data['notes'] as String? ?? '';
+    final receiptUrl = _data['receipt_image_url'] as String? ?? '';
 
-    final dateStr = data['transaction_date'] as String? ?? '';
+    final dateStr = _data['transaction_date'] as String? ?? '';
     DateTime date;
     try {
       date = DateTime.parse(dateStr);
@@ -138,7 +165,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       date = DateTime.now();
     }
     final dateLabel = DateFormat('d MMM yyyy').format(date);
-    final timeLabel = DateFormat('HH:mm').format(date);
+
+    final createdAtStr = _data['created_at'] as String? ?? '';
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(createdAtStr);
+    } catch (_) {
+      createdAt = date;
+    }
+    final timeLabel = DateFormat('HH:mm').format(createdAt);
 
     final categoryIconP = categoryIconPath(categoryName, type: _type);
     final subCategoryIconP = subCategoryIconPath(subCategoryName, type: _type);
@@ -172,7 +207,21 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 48),
+                  SizedBox(
+                    width: 48,
+                    child: _loadingFull
+                        ? const Center(
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
                 ],
               ),
             ),
@@ -271,10 +320,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                             _rowDivider(),
                             _DetailRow(label: 'Note', value: notes),
                           ],
-                          if (receiptUrl.isNotEmpty) ...[
-                            _rowDivider(),
-                            _AttachmentRow(url: receiptUrl),
-                          ],
+                          _rowDivider(),
+                          _AttachmentRow(url: receiptUrl),
                         ],
                       ),
                     ),
@@ -458,6 +505,7 @@ class _AttachmentRow extends StatelessWidget {
   const _AttachmentRow({required this.url});
 
   void _showFullImage(BuildContext context) {
+    final resolved = ApiClient.resolveMediaUrl(url);
     showDialog(
       context: context,
       barrierColor: Colors.black87,
@@ -470,7 +518,7 @@ class _AttachmentRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                url,
+                resolved,
                 fit: BoxFit.contain,
                 loadingBuilder: (_, child, progress) {
                   if (progress == null) return child;
@@ -484,7 +532,7 @@ class _AttachmentRow extends StatelessWidget {
                     ),
                   );
                 },
-                errorBuilder: (_, __, ___) => const SizedBox(
+                errorBuilder: (context, error, stack) => const SizedBox(
                   height: 200,
                   child: Center(
                     child: Icon(
@@ -516,14 +564,31 @@ class _AttachmentRow extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (url.isEmpty)
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.image_not_supported_outlined,
+                color: AppColors.placeholderText,
+                size: 28,
+              ),
+            )
+          else
           GestureDetector(
             onTap: () => _showFullImage(context),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.network(
-                url,
+                ApiClient.resolveMediaUrl(url),
                 width: 80,
                 height: 80,
+                cacheWidth: 160,
+                cacheHeight: 160,
                 fit: BoxFit.cover,
                 loadingBuilder: (_, child, progress) {
                   if (progress == null) return child;
@@ -542,7 +607,7 @@ class _AttachmentRow extends StatelessWidget {
                     ),
                   );
                 },
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (context, error, stack) => Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
