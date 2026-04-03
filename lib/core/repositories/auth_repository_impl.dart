@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../database/daos/auth_cache_dao.dart';
 import '../database/daos/sync_queue_dao.dart';
@@ -19,6 +20,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final ConnectivityService _connectivity;
 
   static const _salt = 'monex_salt_v1';
+  static final _googleSignIn = GoogleSignIn();
 
   AuthRepositoryImpl({
     required AuthCacheDao authCacheDao,
@@ -156,7 +158,38 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthResult> loginWithGoogle() async {
+    try {
+      // Sign out first to force account picker on every call.
+      await _googleSignIn.signOut();
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        return AuthResult.failure('Sign in cancelled');
+      }
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        return AuthResult.failure('Failed to get Google ID token');
+      }
+
+      final data = await AuthService.loginWithGoogle(idToken: idToken);
+      final token = data['token'] as String;
+      final username = data['username'] as String;
+      await LocalStorage.saveToken(token);
+      await LocalStorage.saveUsername(username);
+      await LocalStorage.setOnboardingCompleted();
+      return AuthResult.online(token: token, username: username);
+    } on DioException catch (e) {
+      return AuthResult.failure(AuthService.errorMessage(e));
+    } on Exception catch (e) {
+      debugPrint('[AuthRepository] Google sign-in error: $e');
+      return AuthResult.failure('Google sign in failed. Please try again.');
+    }
+  }
+
+  @override
   Future<void> signOut() async {
+    await _googleSignIn.signOut();
     await LocalStorage.clearAll();
     // auth_cache is intentionally preserved for future offline login
   }

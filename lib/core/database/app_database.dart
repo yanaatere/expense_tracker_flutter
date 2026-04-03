@@ -13,7 +13,7 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'monex.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -65,6 +65,31 @@ class AppDatabase {
     ''');
 
     await _createWalletsTable(db);
+    await _createRecurringTransactionsTable(db);
+  }
+
+  static Future<void> _createRecurringTransactionsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE recurring_transactions (
+        id                  TEXT PRIMARY KEY,
+        server_id           TEXT,
+        user_id             TEXT NOT NULL,
+        title               TEXT NOT NULL,
+        type                TEXT NOT NULL,
+        amount              REAL NOT NULL,
+        category_id         INTEGER,
+        sub_category_id     INTEGER,
+        wallet_id           TEXT,
+        frequency           TEXT NOT NULL,
+        start_date          TEXT NOT NULL,
+        end_date            TEXT,
+        is_active           INTEGER NOT NULL DEFAULT 1,
+        next_execution_date TEXT,
+        sync_status         TEXT NOT NULL DEFAULT 'local',
+        created_at          INTEGER NOT NULL,
+        updated_at          INTEGER NOT NULL
+      )
+    ''');
   }
 
   static Future<void> _createWalletsTable(Database db) async {
@@ -94,6 +119,9 @@ class AppDatabase {
       await db.execute(
         'ALTER TABLE wallets ADD COLUMN backdrop_image TEXT',
       );
+    }
+    if (oldVersion < 4) {
+      await _createRecurringTransactionsTable(db);
     }
   }
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/wallet_definitions.dart';
 import '../../core/storage/local_storage.dart';
 import '../../service_locator.dart';
+import '../../shared/widgets/amount_numpad.dart';
 import '../../shared/widgets/primary_button.dart';
 
 class SetupWalletScreen extends StatefulWidget {
@@ -27,9 +29,9 @@ class SetupWalletScreen extends StatefulWidget {
 
 class _SetupWalletScreenState extends State<SetupWalletScreen> {
   final _customNameController = TextEditingController();
-  final _balanceController = TextEditingController();
   final _goalsController = TextEditingController();
 
+  String _amountStr = '0';
   String _currency = 'IDR';
   late String _type;
   bool _loading = false;
@@ -60,8 +62,7 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
   }
 
   String get _balancePreview {
-    final raw = _balanceController.text.isEmpty ? '0' : _balanceController.text;
-    final amount = double.tryParse(raw) ?? 0;
+    final amount = double.tryParse(_amountStr) ?? 0;
     if (_currency == 'IDR') return 'Rp. ${_formatAmount(amount)}';
     if (_currency == 'USD') return '\$ ${_formatAmount(amount)}';
     return '€ ${_formatAmount(amount)}';
@@ -122,9 +123,8 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
   }
 
   Future<void> _save() async {
-    final balanceText = _balanceController.text.trim();
-    final balance = balanceText.isEmpty ? 0.0 : double.tryParse(balanceText);
-    if (balance == null || balance < 0) {
+    final balance = double.tryParse(_amountStr) ?? 0.0;
+    if (balance < 0) {
       setState(() => _error = 'Please enter a valid balance (0 or more)');
       return;
     }
@@ -165,7 +165,6 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
   @override
   void dispose() {
     _customNameController.dispose();
-    _balanceController.dispose();
     _goalsController.dispose();
     super.dispose();
   }
@@ -278,11 +277,15 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
               // Balance
               _FieldLabel(l10n.balance),
               const SizedBox(height: 8),
-              _TextField(
-                controller: _balanceController,
-                onChanged: (_) => setState(() {}),
-                hintText: 'Initial Balance',
-                keyboardType: TextInputType.number,
+              _AmountTile(
+                amountStr: _amountStr,
+                onTap: () async {
+                  final result = await showAmountPicker(
+                    context,
+                    initial: _amountStr,
+                  );
+                  if (result != null) setState(() => _amountStr = result);
+                },
               ),
               const SizedBox(height: 16),
 
@@ -393,6 +396,54 @@ class _WalletCardPreview extends StatelessWidget {
   }
 }
 
+class _AmountTile extends StatelessWidget {
+  final String amountStr;
+  final VoidCallback onTap;
+
+  const _AmountTile({required this.amountStr, required this.onTap});
+
+  String get _formatted {
+    final amount = double.tryParse(amountStr) ?? 0;
+    if (amount == 0) return 'Rp. 0';
+    final v = amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return 'Rp. $v';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _formatted,
+                style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(Icons.dialpad_rounded, size: 18, color: Colors.grey.shade500),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FieldLabel extends StatelessWidget {
   final String label;
   const _FieldLabel(this.label);
@@ -414,13 +465,11 @@ class _TextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String>? onChanged;
-  final TextInputType? keyboardType;
 
   const _TextField({
     required this.controller,
     required this.hintText,
     this.onChanged,
-    this.keyboardType,
   });
 
   @override
@@ -428,7 +477,6 @@ class _TextField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(

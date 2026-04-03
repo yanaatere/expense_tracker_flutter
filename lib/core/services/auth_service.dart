@@ -31,6 +31,18 @@ class AuthService {
     return envelope['data'] as Map<String, dynamic>;
   }
 
+  /// POST /auth/google → { id, username, email, token }
+  static Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
+  }) async {
+    final response = await _dio.post(
+      '/api/auth/google',
+      data: {'id_token': idToken},
+    );
+    final envelope = response.data as Map<String, dynamic>;
+    return envelope['data'] as Map<String, dynamic>;
+  }
+
   /// Extract a readable message from a DioException.
   static String errorMessage(DioException e) {
     final data = e.response?.data;

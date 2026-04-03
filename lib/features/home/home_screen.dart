@@ -2,89 +2,43 @@ import 'dart:ui';
 
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
-import '../../core/services/transaction_service.dart';
-import '../../core/storage/local_storage.dart';
-
-// ---------------------------------------------------------------------------
-// Transaction model (mapped from API)
-// ---------------------------------------------------------------------------
-
-class _Transaction {
-  final String title;
-  final String category;
-  final String type;
-  final double amount;
-  final DateTime date;
-  final Map<String, dynamic> rawData;
-
-  _Transaction(this.title, this.category, this.type, this.amount, this.date, this.rawData);
-
-  factory _Transaction.fromApi(Map<String, dynamic> map) {
-    final type = map['type'] as String? ?? 'expense';
-    final raw = map['amount'];
-    double amount = raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
-    if (type == 'expense') amount = -amount.abs();
-
-    // Resolve category name from category_id using local definitions
-    // (the API does not return category_name; categories table was dropped)
-    String categoryName = '';
-    final rawId = map['category_id'];
-    if (rawId != null) {
-      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
-      if (id != null) {
-        final cats = localCategories(type: type);
-        final match = cats.firstWhere((c) => c['id'] == id, orElse: () => {});
-        categoryName = match['name'] as String? ?? '';
-      }
-    }
-
-    final dateStr = map['transaction_date'] as String? ?? '';
-    DateTime date;
-    try {
-      date = DateTime.parse(dateStr);
-    } catch (_) {
-      date = DateTime.now();
-    }
-
-    return _Transaction(
-      map['description'] as String? ?? '',
-      categoryName,
-      type,
-      amount,
-      date,
-      map,
-    );
-  }
-}
+import '../../core/models/transaction.dart';
+import 'cubit/home_cubit.dart';
+import 'cubit/home_state.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => HomeCubit()..load(),
+      child: const _HomeView(),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  String _username = 'User';
+class _HomeView extends StatefulWidget {
+  const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   bool _isScrolled = false;
   late final ScrollController _scrollController;
-
-  List<_Transaction> _transactions = [];
-  bool _loadingTransactions = true;
-  String? _transactionError;
-
-  Map<String, dynamic>? _homeSummary;
-  bool _loadingSummary = true;
 
   @override
   void initState() {
@@ -94,54 +48,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final scrolled = _scrollController.offset > 10;
       if (scrolled != _isScrolled) setState(() => _isScrolled = scrolled);
     });
-    _loadUser();
-    _loadTransactions();
-    _loadHomeSummary();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _refreshAll();
-    }
-  }
-
-  Future<void> _loadUser() async {
-    final username = await LocalStorage.getUsername();
-    if (mounted) setState(() => _username = username ?? 'User');
-  }
-
-  Future<void> _refreshAll() => Future.wait([_loadTransactions(), _loadHomeSummary()]);
-
-  Future<void> _loadHomeSummary() async {
-    try {
-      final data = await TransactionService.getHomeSummary();
-      if (!mounted) return;
-      setState(() {
-        _homeSummary = data;
-        _loadingSummary = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingSummary = false);
-    }
-  }
-
-  Future<void> _loadTransactions() async {
-    try {
-      final data = await TransactionService.getRecentTransactions(limit: 10);
-      if (!mounted) return;
-      setState(() {
-        _transactions = data.map(_Transaction.fromApi).toList();
-        _loadingTransactions = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _transactionError = 'Failed to load transactions';
-        _loadingTransactions = false;
-      });
+      context.read<HomeCubit>().refresh();
     }
   }
 
@@ -161,80 +74,83 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // SliverAppBar is tall enough to place content *below* the notch.
     final topPadding = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: AppColors.pageBg,
-      extendBody: true,
-      bottomNavigationBar: _GlassBottomNav(onAddTransaction: _refreshAll),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () => Future.wait([_loadUser(), _refreshAll()]),
-        child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          // ── Sticky header ──────────────────────────────────────────────
-          SliverAppBar(
-            pinned: true,
-            floating: false,
-            // 80 px of visible content + the device's top inset (notch / status bar)
-            expandedHeight: topPadding + 80,
-            // Match collapsedHeight so pinned bar never clips content
-            toolbarHeight: topPadding + 68,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            flexibleSpace: _Header(
-              username: _username,
-              isScrolled: _isScrolled,
+    return BlocBuilder<HomeCubit, HomeState>(
+      builder: (context, state) {
+        final cubit = context.read<HomeCubit>();
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          extendBody: true,
+          bottomNavigationBar: _GlassBottomNav(onAddTransaction: cubit.refresh),
+          body: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: cubit.refresh,
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // ── Sticky header ────────────────────────────────────────
+                SliverAppBar(
+                  pinned: true,
+                  floating: false,
+                  expandedHeight: topPadding + 80,
+                  toolbarHeight: topPadding + 68,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  flexibleSpace: _Header(
+                    username: state.username,
+                    isScrolled: _isScrolled,
+                  ),
+                ),
+
+                // ── Total expense card ───────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: _TotalExpenseCard(
+                      summary: state.summary,
+                      isLoading: state.loadingSummary,
+                    ),
+                  ),
+                ),
+
+                // ── Balance + Income card ────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: _BalanceIncomeCard(
+                      summary: state.summary,
+                      isLoading: state.loadingSummary,
+                    ),
+                  ),
+                ),
+
+                // ── Quick actions ────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: _QuickActions(onWalletReturn: cubit.refresh),
+                  ),
+                ),
+
+                // ── Recent Transactions ──────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: _RecentTransactionSection(
+                      transactions: state.transactions,
+                      isLoading: state.loadingTransactions,
+                      error: state.transactionError,
+                      onTransactionChanged: cubit.refresh,
+                    ),
+                  ),
+                ),
+
+                // ── Bottom padding ───────────────────────────────────────
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
             ),
           ),
-
-          // ── Total expense card ─────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: _TotalExpenseCard(
-                summary: _homeSummary,
-                isLoading: _loadingSummary,
-              ),
-            ),
-          ),
-
-          // ── Balance + Income card ──────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _BalanceIncomeCard(
-                summary: _homeSummary,
-                isLoading: _loadingSummary,
-              ),
-            ),
-          ),
-
-          // ── Quick actions ──────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _QuickActions(onWalletReturn: _refreshAll),
-            ),
-          ),
-
-          // ── Recent Transactions (header + flat list in one card) ──────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-              child: _RecentTransactionSection(
-                transactions: _transactions,
-                isLoading: _loadingTransactions,
-                error: _transactionError,
-                onTransactionChanged: _refreshAll,
-              ),
-            ),
-          ),
-
-          // ── Bottom padding so content clears the nav bar ──────────────
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -522,7 +438,7 @@ class _QuickActions extends StatelessWidget {
       children: [
         Expanded(child: _ActionButton(icon: Icons.attach_money, label: 'Budgeting', onTap: () {})),
         const SizedBox(width: 8),
-        Expanded(child: _ActionButton(icon: Icons.sync, label: 'Recurring', onTap: () {})),
+        Expanded(child: _ActionButton(icon: Icons.sync, label: 'Recurring', onTap: () => context.push('/recurring'))),
         const SizedBox(width: 8),
         Expanded(child: _ActionButton(
           icon: Icons.account_balance_wallet,
@@ -584,7 +500,7 @@ class _ActionButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RecentTransactionSection extends StatelessWidget {
-  final List<_Transaction> transactions;
+  final List<Transaction> transactions;
   final bool isLoading;
   final String? error;
   final VoidCallback? onTransactionChanged;
@@ -706,7 +622,7 @@ class _RecentTransactionSection extends StatelessWidget {
 }
 
 class _TransactionRow extends StatelessWidget {
-  final _Transaction transaction;
+  final Transaction transaction;
   final VoidCallback? onDeleted;
   const _TransactionRow({required this.transaction, this.onDeleted});
 

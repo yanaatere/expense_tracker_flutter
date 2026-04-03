@@ -392,12 +392,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           elevation: 0,
                         ),
                         onPressed: () async {
-                          final updated = await context.push<bool>(
+                          final router = GoRouter.of(context);
+                          final updated = await router.push<bool>(
                             '/transactions/edit',
                             extra: _data,
                           );
-                          if (updated == true && mounted) {
-                            context.pop(true);
+                          if (!mounted) return;
+                          if (updated == true) {
+                            router.pop(true);
                           }
                         },
                       ),

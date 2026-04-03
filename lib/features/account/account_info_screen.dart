@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/storage/local_storage.dart';
@@ -18,6 +23,7 @@ class AccountInfoScreen extends StatefulWidget {
 
 class _AccountInfoScreenState extends State<AccountInfoScreen> {
   String _username = 'User';
+  String? _avatarPath;
 
   @override
   void initState() {
@@ -27,7 +33,84 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
 
   Future<void> _loadUser() async {
     final username = await LocalStorage.getUsername();
-    if (mounted) setState(() => _username = username ?? 'User');
+    final avatarPath = await LocalStorage.getAvatarPath();
+    if (mounted) {
+      setState(() {
+        _username = username ?? 'User';
+        _avatarPath = avatarPath;
+      });
+    }
+  }
+
+  Future<void> _pickAvatar(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    // Copy to app documents so it survives cache clears
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dest = p.join(docsDir.path, 'avatar.jpg');
+    await File(picked.path).copy(dest);
+    await LocalStorage.saveAvatarPath(dest);
+    if (mounted) setState(() => _avatarPath = dest);
+  }
+
+  void _showAvatarOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.inputBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+              title: Text('Take Photo', style: GoogleFonts.urbanist(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+              title: Text('Choose from Gallery', style: GoogleFonts.urbanist(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAvatar(ImageSource.gallery);
+              },
+            ),
+            if (_avatarPath != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: AppColors.expense),
+                title: Text('Remove Photo', style: GoogleFonts.urbanist(color: AppColors.expense, fontWeight: FontWeight.w500)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await LocalStorage.clearAvatarPath();
+                  if (mounted) setState(() => _avatarPath = null);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -74,7 +157,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                     Center(
                       child: Column(
                         children: [
-                          Stack(
+                          GestureDetector(
+                            onTap: _showAvatarOptions,
+                            child: Stack(
                             children: [
                               Container(
                                 width: 80,
@@ -83,11 +168,19 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                                   color: AppColors.cardBg,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.person_rounded,
-                                  size: 44,
-                                  color: AppColors.primary,
-                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: _avatarPath != null
+                                    ? Image.file(
+                                        File(_avatarPath!),
+                                        fit: BoxFit.cover,
+                                        width: 80,
+                                        height: 80,
+                                      )
+                                    : const Icon(
+                                        Icons.person_rounded,
+                                        size: 44,
+                                        color: AppColors.primary,
+                                      ),
                               ),
                               Positioned(
                                 bottom: 0,
@@ -111,6 +204,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                                 ),
                               ),
                             ],
+                          ),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -360,9 +454,8 @@ class _SectionLabel extends StatelessWidget {
 
 class _MenuGroup extends StatelessWidget {
   final List<_MenuItem> items;
-  final bool highlighted;
 
-  const _MenuGroup({required this.items, this.highlighted = false});
+  const _MenuGroup({required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -370,9 +463,6 @@ class _MenuGroup extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: highlighted
-            ? Border.all(color: AppColors.primary, width: 1.5)
-            : null,
       ),
       child: Column(children: items),
     );

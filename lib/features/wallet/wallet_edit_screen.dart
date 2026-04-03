@@ -10,6 +10,7 @@ import '../../core/constants/wallet_definitions.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
+import '../../shared/widgets/amount_numpad.dart';
 import '../../shared/widgets/wallet_card.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -25,9 +26,9 @@ class WalletEditScreen extends StatefulWidget {
 class _WalletEditScreenState extends State<WalletEditScreen> {
   late String _type;
   late String _currency;
+  late String _amountStr;
   late final TextEditingController _nameController;
   late final TextEditingController _goalsController;
-  late final TextEditingController _balanceController;
 
   List<WalletOption> _walletOptions = [];
   String? _selectedWalletName;
@@ -67,8 +68,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
     return _selectedWalletName ?? _nameController.text;
   }
 
-  double get _previewBalance =>
-      double.tryParse(_balanceController.text) ?? 0;
+  double get _previewBalance => double.tryParse(_amountStr) ?? 0;
 
   @override
   void initState() {
@@ -76,12 +76,10 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
     final w = widget.wallet;
     _type = w.type;
     _currency = w.currency;
+    _amountStr = w.balance == w.balance.truncateToDouble()
+        ? w.balance.toInt().toString()
+        : w.balance.toString();
     _goalsController = TextEditingController(text: w.goals ?? '');
-    _balanceController = TextEditingController(
-      text: w.balance == w.balance.truncateToDouble()
-          ? w.balance.toInt().toString()
-          : w.balance.toString(),
-    );
 
     _backdropImage = widget.wallet.backdropImage ??
         _backdropAssets[Random().nextInt(_backdropAssets.length)];
@@ -105,7 +103,6 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
   void dispose() {
     _nameController.dispose();
     _goalsController.dispose();
-    _balanceController.dispose();
     super.dispose();
   }
 
@@ -258,7 +255,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
         name: name,
         type: _type,
         currency: _currency,
-        balance: double.tryParse(_balanceController.text) ?? 0,
+        balance: double.tryParse(_amountStr) ?? 0,
         goals: _goalsController.text.trim().isEmpty
             ? null
             : _goalsController.text.trim(),
@@ -462,13 +459,15 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                     // ── Balance ──────────────────────────────────────────────
                     _EditField(
                       label: 'Balance',
-                      child: _InputField(
-                        controller: _balanceController,
-                        hintText: '0',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
+                      child: _AmountTile(
+                        amountStr: _amountStr,
+                        onTap: () async {
+                          final result = await showAmountPicker(
+                            context,
+                            initial: _amountStr,
+                          );
+                          if (result != null) setState(() => _amountStr = result);
+                        },
                       ),
                     ),
 
@@ -562,13 +561,11 @@ class _EditField extends StatelessWidget {
 class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
-  final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
 
   const _InputField({
     required this.controller,
     required this.hintText,
-    this.keyboardType,
     this.onChanged,
   });
 
@@ -576,7 +573,6 @@ class _InputField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      keyboardType: keyboardType,
       onChanged: onChanged,
       style: GoogleFonts.urbanist(fontSize: 14, color: AppColors.placeholderText),
       decoration: InputDecoration(
@@ -600,6 +596,56 @@ class _InputField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Amount tile ───────────────────────────────────────────────────────────────
+
+class _AmountTile extends StatelessWidget {
+  final String amountStr;
+  final VoidCallback onTap;
+
+  const _AmountTile({required this.amountStr, required this.onTap});
+
+  String get _formatted {
+    final amount = double.tryParse(amountStr) ?? 0;
+    if (amount == 0) return 'Rp. 0';
+    final v = amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return 'Rp. $v';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.inputBg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _formatted,
+                style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  color: AppColors.labelText,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const Icon(Icons.dialpad_rounded,
+                size: 18, color: AppColors.placeholderText),
+          ],
         ),
       ),
     );

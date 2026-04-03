@@ -111,6 +111,25 @@ class LocalStorage {
   static Future<String?> getPin() => _storage.read(key: _pinKey);
   static Future<void> clearPin() => _storage.delete(key: _pinKey);
 
+  // ── Avatar path (shared prefs) ──────────────────────────────────────────────
+
+  static const _avatarPathKey = 'avatar_path';
+
+  static Future<void> saveAvatarPath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_avatarPathKey, path);
+  }
+
+  static Future<String?> getAvatarPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_avatarPathKey);
+  }
+
+  static Future<void> clearAvatarPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_avatarPathKey);
+  }
+
   // ── PIN enabled flag (shared prefs) ─────────────────────────────────────────
 
   static Future<void> setPinEnabled(bool enabled) async {

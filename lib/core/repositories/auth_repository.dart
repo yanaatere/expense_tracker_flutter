@@ -48,6 +48,8 @@ abstract class AuthRepository {
     required String password,
   });
 
+  Future<AuthResult> loginWithGoogle();
+
   Future<void> signOut();
 
   Future<bool> isAuthenticated();

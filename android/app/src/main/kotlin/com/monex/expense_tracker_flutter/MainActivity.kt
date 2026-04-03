@@ -1,4 +1,4 @@
-package com.monex.expense_tracker_flutter
+package com.monex.expense_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'core/database/app_database.dart';
 import 'core/database/daos/auth_cache_dao.dart';
+import 'core/database/daos/recurring_transaction_dao.dart';
 import 'core/database/daos/sync_queue_dao.dart';
 import 'core/database/daos/wallet_dao.dart';
 import 'core/repositories/auth_repository.dart';
@@ -19,6 +20,7 @@ class ServiceLocator {
   static late SyncService syncService;
   static late AuthRepository authRepository;
   static late WalletRepository walletRepository;
+  static late RecurringTransactionDao recurringTransactionDao;
   static late ValueNotifier<Locale> localeNotifier;
   static StreamSubscription<bool>? _connectivitySubscription;
 
@@ -35,6 +37,7 @@ class ServiceLocator {
     final syncQueueDao = SyncQueueDao(db);
     final walletDao = WalletDao(db);
     final authCacheDao = AuthCacheDao(db);
+    recurringTransactionDao = RecurringTransactionDao(db);
 
     syncService = SyncService(
       syncQueueDao: syncQueueDao,

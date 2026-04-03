@@ -23,7 +23,10 @@ dependencies:
   crypto: ^3.0.3
   adaptive_platform_ui: ^0.1.103
   image_picker: ^1.1.2
+  path_provider: ^2.1.0
   syncfusion_flutter_charts: ^33.1.46
+  flutter_bloc: ^9.0.0
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:

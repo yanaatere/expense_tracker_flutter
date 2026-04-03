@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_text_styles.dart';
 
 class SocialLoginButtons extends StatelessWidget {
-  const SocialLoginButtons({super.key});
+  final VoidCallback? onGooglePressed;
+  const SocialLoginButtons({super.key, this.onGooglePressed});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,7 @@ class SocialLoginButtons extends StatelessWidget {
         _SocialButton(
           label: 'Google',
           icon: _googleIcon(),
-          onPressed: () {},
+          onPressed: onGooglePressed ?? () {},
         ),
         const SizedBox(height: 12),
         _SocialButton(

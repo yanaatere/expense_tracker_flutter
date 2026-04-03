@@ -20,6 +20,7 @@ class _SignInScreenState extends State<SignInScreen>
 
   bool _showPassword = false;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   String _errorMessage = '';
 
   late final AnimationController _animController;
@@ -79,6 +80,24 @@ class _SignInScreenState extends State<SignInScreen>
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = '';
+    });
+    try {
+      final result = await ServiceLocator.authRepository.loginWithGoogle();
+      if (result.success) {
+        if (mounted) context.go('/home');
+      } else {
+        setState(() =>
+            _errorMessage = result.errorMessage ?? 'Google sign in failed');
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -206,7 +225,23 @@ class _SignInScreenState extends State<SignInScreen>
                           onPressed: _handleSignIn,
                         ),
                         const SizedBox(height: 32),
-                        const SocialLoginButtons(),
+                        SocialLoginButtons(
+                          onGooglePressed:
+                              _isGoogleLoading ? null : _handleGoogleSignIn,
+                        ),
+                        if (_isGoogleLoading) ...[
+                          const SizedBox(height: 12),
+                          const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF635AFF),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

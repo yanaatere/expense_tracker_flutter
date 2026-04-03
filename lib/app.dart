@@ -28,6 +28,8 @@ import 'features/account/account_info_screen.dart';
 import 'features/account/activate_pin_screen.dart';
 import 'features/account/edit_profile_screen.dart';
 import 'features/account/pin_setup_screen.dart';
+import 'features/recurring/recurring_screen.dart';
+import 'features/recurring/add_recurring_screen.dart';
 import 'features/welcome/welcome_screen.dart';
 
 class MonexApp extends StatefulWidget {
@@ -246,6 +248,14 @@ final _router = GoRouter(
     GoRoute(
       path: '/pin-login',
       builder: (context, state) => const PinLoginScreen(),
+    ),
+    GoRoute(
+      path: '/recurring',
+      builder: (context, state) => const RecurringScreen(),
+    ),
+    GoRoute(
+      path: '/recurring/add',
+      builder: (context, state) => const AddRecurringScreen(),
     ),
     GoRoute(
       path: '/add-transaction',

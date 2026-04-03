@@ -1,107 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
-import '../../core/services/transaction_service.dart';
+import '../../core/models/transaction.dart';
 import '../../core/utils/currency_formatter.dart';
-
-// ---------------------------------------------------------------------------
-// Transaction model
-// ---------------------------------------------------------------------------
-
-class _Transaction {
-  final String title;
-  final String category;
-  final String type;
-  final double amount;
-  final DateTime date;
-  final int? categoryId;
-  final Map<String, dynamic> rawData;
-
-  _Transaction(
-    this.title,
-    this.category,
-    this.type,
-    this.amount,
-    this.date,
-    this.categoryId,
-    this.rawData,
-  );
-
-  factory _Transaction.fromApi(Map<String, dynamic> map) {
-    final type = map['type'] as String? ?? 'expense';
-    final raw = map['amount'];
-    double amount = raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
-    if (type == 'expense') amount = -amount.abs();
-
-    final rawId = map['category_id'];
-    int? categoryId;
-    String categoryName = '';
-    if (rawId != null) {
-      final id = rawId is int ? rawId : int.tryParse(rawId.toString());
-      categoryId = id;
-      if (id != null) {
-        final cats = localCategories(type: type);
-        final match = cats.firstWhere((c) => c['id'] == id, orElse: () => {});
-        categoryName = match['name'] as String? ?? '';
-      }
-    }
-
-    final dateStr = map['transaction_date'] as String? ?? '';
-    DateTime date;
-    try {
-      date = DateTime.parse(dateStr);
-    } catch (_) {
-      date = DateTime.now();
-    }
-
-    return _Transaction(
-      map['description'] as String? ?? '',
-      categoryName,
-      type,
-      amount,
-      date,
-      categoryId,
-      map,
-    );
-  }
-}
+import 'cubit/transaction_filter_cubit.dart';
+import 'cubit/transaction_filter_state.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 
-class RecentTransactionFullPage extends StatefulWidget {
+class RecentTransactionFullPage extends StatelessWidget {
   const RecentTransactionFullPage({super.key});
 
   @override
-  State<RecentTransactionFullPage> createState() =>
-      _RecentTransactionFullPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => TransactionFilterCubit()..load(),
+      child: const _RecentTransactionView(),
+    );
+  }
 }
 
-class _RecentTransactionFullPageState
-    extends State<RecentTransactionFullPage> {
-  List<_Transaction> _all = [];
-  bool _loading = true;
-  String? _error;
+class _RecentTransactionView extends StatefulWidget {
+  const _RecentTransactionView();
 
-  // Filters
-  String _dateFilter = 'All time';
-  String? _typeFilter; // null = all, 'income', 'expense'
-  String? _categoryFilter; // null = all, category name string
+  @override
+  State<_RecentTransactionView> createState() => _RecentTransactionViewState();
+}
 
+class _RecentTransactionViewState extends State<_RecentTransactionView> {
   final _searchController = TextEditingController();
-  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadTransactions();
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.toLowerCase().trim());
+      context.read<TransactionFilterCubit>().setSearch(_searchController.text);
     });
   }
 
@@ -111,84 +51,7 @@ class _RecentTransactionFullPageState
     super.dispose();
   }
 
-  Future<void> _loadTransactions() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final raw = await TransactionService.getRecentTransactions(limit: 200);
-      final txns = raw.map(_Transaction.fromApi).toList();
-      if (mounted) setState(() => _all = txns);
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  List<_Transaction> get _filtered {
-    final now = DateTime.now();
-    return _all.where((t) {
-      // Date filter
-      if (_dateFilter == 'This month') {
-        if (t.date.year != now.year || t.date.month != now.month) return false;
-      } else if (_dateFilter == 'Last month') {
-        final last = DateTime(now.year, now.month - 1);
-        if (t.date.year != last.year || t.date.month != last.month) return false;
-      }
-
-      // Type filter
-      if (_typeFilter != null && t.type != _typeFilter) return false;
-
-      // Category filter
-      if (_categoryFilter != null && t.category != _categoryFilter) return false;
-
-      // Search
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery;
-        if (!t.title.toLowerCase().contains(q) &&
-            !t.category.toLowerCase().contains(q)) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
-  }
-
-  // ── Available categories based on current type filter ─────────────────────
-
-  List<String> get _availableCategories {
-    if (_typeFilter == 'income') {
-      return incomeCategories.map((c) => c['name'] as String).toList();
-    } else if (_typeFilter == 'expense') {
-      return expenseCategories.map((c) => c['name'] as String).toList();
-    }
-    return [
-      ...incomeCategories.map((c) => c['name'] as String),
-      ...expenseCategories.map((c) => c['name'] as String),
-    ];
-  }
-
-  // ── Filter pill label ─────────────────────────────────────────────────────
-
-  String get _typePillLabel {
-    if (_typeFilter == 'income') return 'Income';
-    if (_typeFilter == 'expense') return 'Expense';
-    return 'Type';
-  }
-
-  String get _categoryPillLabel =>
-      _categoryFilter != null ? _categoryFilter! : 'Category';
-
-  bool get _typePillActive => _typeFilter != null;
-  bool get _categoryPillActive => _categoryFilter != null;
-  bool get _datePillActive => _dateFilter != 'All time';
-
-  // ── Bottom sheet: Transaction Type ────────────────────────────────────────
-
-  void _showTypePicker() {
+  void _showTypePicker(TransactionFilterState state) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -196,24 +59,13 @@ class _RecentTransactionFullPageState
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _TypePickerSheet(
-        selected: _typeFilter,
-        onSelect: (v) {
-          setState(() {
-            _typeFilter = v;
-            // Reset category if it no longer belongs to the new type
-            if (_categoryFilter != null &&
-                !_availableCategories.contains(_categoryFilter)) {
-              _categoryFilter = null;
-            }
-          });
-        },
+        selected: state.typeFilter,
+        onSelect: (v) => context.read<TransactionFilterCubit>().setTypeFilter(v),
       ),
     );
   }
 
-  // ── Bottom sheet: Category ────────────────────────────────────────────────
-
-  void _showCategoryPicker() {
+  void _showCategoryPicker(TransactionFilterState state) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -222,16 +74,14 @@ class _RecentTransactionFullPageState
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _CategoryPickerSheet(
-        categories: _availableCategories,
-        selected: _categoryFilter,
-        onSelect: (v) => setState(() => _categoryFilter = v),
+        categories: state.availableCategories,
+        selected: state.categoryFilter,
+        onSelect: (v) => context.read<TransactionFilterCubit>().setCategoryFilter(v),
       ),
     );
   }
 
-  // ── Bottom sheet: Date range ──────────────────────────────────────────────
-
-  void _showDatePicker() {
+  void _showDatePicker(TransactionFilterState state) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -239,176 +89,187 @@ class _RecentTransactionFullPageState
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _DatePickerSheet(
-        selected: _dateFilter,
-        onSelect: (v) => setState(() => _dateFilter = v),
+        selected: state.dateFilter,
+        onSelect: (v) => context.read<TransactionFilterCubit>().setDateFilter(v),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final txns = _filtered;
+    return BlocBuilder<TransactionFilterCubit, TransactionFilterState>(
+      builder: (context, state) {
+        final cubit = context.read<TransactionFilterCubit>();
+        final txns = state.filtered;
 
-    return Scaffold(
-      backgroundColor: AppColors.pageBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.pageBg,
-        elevation: 0,
-        leading: GestureDetector(
-          onTap: () => context.pop(),
-          child: const Icon(Icons.arrow_back, color: AppColors.labelText),
-        ),
-        title: Text(
-          'Recent Transaction',
-          style: GoogleFonts.urbanist(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.labelText,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // ── Search bar ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Container(
-              height: 46,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: AppColors.inputBorder),
-              ),
-              child: TextField(
-                controller: _searchController,
-                style: GoogleFonts.urbanist(
-                  fontSize: 14,
-                  color: AppColors.labelText,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search',
-                  hintStyle: GoogleFonts.urbanist(
-                    fontSize: 14,
-                    color: AppColors.placeholderText,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: AppColors.placeholderText,
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                ),
+        final typePillLabel = state.typeFilter == 'income'
+            ? 'Income'
+            : state.typeFilter == 'expense'
+                ? 'Expense'
+                : 'Type';
+
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            backgroundColor: AppColors.pageBg,
+            elevation: 0,
+            leading: GestureDetector(
+              onTap: () => context.pop(),
+              child: const Icon(Icons.arrow_back, color: AppColors.labelText),
+            ),
+            title: Text(
+              'Recent Transaction',
+              style: GoogleFonts.urbanist(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.labelText,
               ),
             ),
+            centerTitle: true,
           ),
-
-          // ── Filter pills ──────────────────────────────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Row(
-              children: [
-                _FilterPill(
-                  label: _dateFilter,
-                  active: _datePillActive,
-                  onTap: _showDatePicker,
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: _typePillLabel,
-                  active: _typePillActive,
-                  onTap: _showTypePicker,
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: _categoryPillLabel,
-                  active: _categoryPillActive,
-                  onTap: _showCategoryPicker,
-                ),
-              ],
-            ),
-          ),
-
-          // ── Transaction list ──────────────────────────────────────────────
-          Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 2,
+          body: Column(
+            children: [
+              // ── Search bar ────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Container(
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(40),
+                    border: Border.all(color: AppColors.inputBorder),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: GoogleFonts.urbanist(
+                      fontSize: 14,
+                      color: AppColors.labelText,
                     ),
-                  )
-                : _error != null
-                    ? Center(
-                        child: Text(
-                          'Failed to load transactions',
-                          style: GoogleFonts.urbanist(
-                            fontSize: 14,
-                            color: AppColors.placeholderText,
-                          ),
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      hintStyle: GoogleFonts.urbanist(
+                        fontSize: 14,
+                        color: AppColors.placeholderText,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.placeholderText,
+                        size: 20,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Filter pills ──────────────────────────────────────────────
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Row(
+                  children: [
+                    _FilterPill(
+                      label: state.dateFilter,
+                      active: state.dateFilter != 'All time',
+                      onTap: () => _showDatePicker(state),
+                    ),
+                    const SizedBox(width: 8),
+                    _FilterPill(
+                      label: typePillLabel,
+                      active: state.typeFilter != null,
+                      onTap: () => _showTypePicker(state),
+                    ),
+                    const SizedBox(width: 8),
+                    _FilterPill(
+                      label: state.categoryFilter ?? 'Category',
+                      active: state.categoryFilter != null,
+                      onTap: () => _showCategoryPicker(state),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Transaction list ──────────────────────────────────────────
+              Expanded(
+                child: state.loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
                         ),
                       )
-                    : txns.isEmpty
+                    : state.error != null
                         ? Center(
                             child: Text(
-                              'No transactions found',
+                              'Failed to load transactions',
                               style: GoogleFonts.urbanist(
                                 fontSize: 14,
                                 color: AppColors.placeholderText,
                               ),
                             ),
                           )
-                        : RefreshIndicator(
-                            color: AppColors.primary,
-                            onRefresh: _loadTransactions,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                              itemCount: txns.length,
-                              separatorBuilder: (context, index) => Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                indent: 60,
-                                endIndent: 0,
-                                color: AppColors.inputBorder.withAlpha(180),
+                        : txns.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No transactions found',
+                                  style: GoogleFonts.urbanist(
+                                    fontSize: 14,
+                                    color: AppColors.placeholderText,
+                                  ),
+                                ),
+                              )
+                            : RefreshIndicator(
+                                color: AppColors.primary,
+                                onRefresh: cubit.load,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                                  itemCount: txns.length,
+                                  separatorBuilder: (context, index) => Divider(
+                                    height: 1,
+                                    thickness: 0.5,
+                                    indent: 60,
+                                    endIndent: 0,
+                                    color: AppColors.inputBorder.withAlpha(180),
+                                  ),
+                                  itemBuilder: (_, i) => _TransactionRow(
+                                    transaction: txns[i],
+                                    onDeleted: cubit.load,
+                                  ),
+                                ),
                               ),
-                              itemBuilder: (_, i) => _TransactionRow(
-                                transaction: txns[i],
-                                onDeleted: _loadTransactions,
-                              ),
-                            ),
-                          ),
-          ),
-        ],
-      ),
-      // ── View Full Report button ───────────────────────────────────────────
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                elevation: 0,
               ),
-              onPressed: () {},
-              child: Text(
-                'View Full Report',
-                style: GoogleFonts.urbanist(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+            ],
+          ),
+          // ── View Full Report button ─────────────────────────────────────
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {},
+                  child: Text(
+                    'View Full Report',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -805,7 +666,7 @@ class _CategoryPickerSheet extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TransactionRow extends StatelessWidget {
-  final _Transaction transaction;
+  final Transaction transaction;
   final VoidCallback? onDeleted;
   const _TransactionRow({required this.transaction, this.onDeleted});
 

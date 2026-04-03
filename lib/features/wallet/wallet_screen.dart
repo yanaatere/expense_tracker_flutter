@@ -294,58 +294,6 @@ class _WalletCard extends StatelessWidget {
   }
 }
 
-// ── Add wallet card ───────────────────────────────────────────────────────────
-
-class _AddWalletCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AddWalletCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(left: 8, right: 16, top: 10, bottom: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.inputBorder,
-            width: 1.5,
-            style: BorderStyle.solid,
-          ),
-          color: Colors.white,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: AppColors.cardBg,
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset('assets/icons/wallets/wallet.png', width: 22, height: 22, color: Colors.white,),
-            ),
-            const SizedBox(height: 6),
-            RotatedBox(
-              quarterTurns: 1,
-              child: Text(
-                'Add Wallet',
-                style: GoogleFonts.urbanist(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.placeholderText,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Add wallet row (shown below all type sections) ────────────────────────────
 
 class _AddWalletRow extends StatelessWidget {

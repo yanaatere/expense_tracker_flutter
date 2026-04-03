@@ -1,113 +1,41 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
-import '../../core/services/transaction_service.dart';
-import '../../core/models/wallet.dart';
-import '../../core/services/wallet_service.dart';
-import '../../service_locator.dart';
+import 'cubit/transaction_form_cubit.dart';
+import 'cubit/transaction_form_state.dart';
 
-class AddTransactionScreen extends StatefulWidget {
+class AddTransactionScreen extends StatelessWidget {
   const AddTransactionScreen({super.key});
 
   @override
-  State<AddTransactionScreen> createState() => _AddTransactionScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => TransactionFormCubit()..loadData(type: 'income'),
+      child: const _AddTransactionView(),
+    );
+  }
 }
 
-class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  String _type = 'income';
-  String _amountStr = '0';
-
-  final _titleController = TextEditingController();
-  final _noteController = TextEditingController();
-
-  List<Map<String, dynamic>> _categories = [];
-  Map<String, dynamic>? _selectedCategory;
-  Map<String, dynamic>? _selectedSubCategory;
-
-  List<Map<String, dynamic>> _wallets = [];
-  Map<String, dynamic>? _selectedWallet;
-
-  bool _submitting = false;
-
-  File? _receiptFile;
-  String? _receiptUrl;
-  bool _uploadingReceipt = false;
-  bool _receiptHovered = false;
+class _AddTransactionView extends StatefulWidget {
+  const _AddTransactionView();
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
+  State<_AddTransactionView> createState() => _AddTransactionViewState();
+}
 
-  Future<void> _loadData() async {
-    final wallets = await ServiceLocator.walletRepository.getWallets()
-        .catchError((_) => <Wallet>[]);
-    if (!mounted) return;
-    setState(() {
-      _categories = localCategories(type: _type);
-      _wallets = wallets.map((w) => <String, dynamic>{
-        'id': w.serverId != null ? int.tryParse(w.serverId!) : null,
-        'name': w.name,
-        'type': w.type,
-        'balance': w.balance,
-      }).where((m) => m['id'] != null).toList();
-      if (_wallets.isNotEmpty) _selectedWallet = _wallets.first;
-    });
-  }
-
-  void _reloadCategories() {
-    setState(() => _categories = localCategories(type: _type));
-  }
-
-  Future<void> _showCategoryPicker() async {
-    final cat = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ItemPickerSheet(
-        title: 'Select Category',
-        items: _categories,
-        selectedId: _selectedCategory?['id'],
-        type: _type,
-        isSub: false,
-      ),
-    );
-    if (cat == null || !mounted) return;
-    setState(() {
-      _selectedCategory = cat;
-      _selectedSubCategory = null; // reset sub when category changes
-    });
-  }
-
-  Future<void> _showSubCategoryPicker() async {
-    if (_selectedCategory == null) return;
-    final categoryName = _selectedCategory!['name'] as String;
-    final items = localSubcategories(categoryName, type: _type);
-    if (items.isEmpty) return;
-
-    final sub = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ItemPickerSheet(
-        title: categoryName,
-        items: items,
-        selectedId: _selectedSubCategory?['id'],
-        type: _type,
-        isSub: true,
-      ),
-    );
-    if (sub == null || !mounted) return;
-    setState(() => _selectedSubCategory = sub);
-  }
+class _AddTransactionViewState extends State<_AddTransactionView> {
+  String _amountStr = '0';
+  final _titleController = TextEditingController();
+  final _noteController = TextEditingController();
+  File? _receiptFile;
+  bool _receiptHovered = false;
 
   double get _amount => double.tryParse(_amountStr) ?? 0;
 
@@ -123,6 +51,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   void _onDigit(String d) {
     setState(() {
+      if (d == '00') {
+        if (_amountStr != '0' && _amountStr.length < 11) {
+          _amountStr += '00';
+        }
+        return;
+      }
       if (_amountStr == '0') {
         _amountStr = d;
       } else if (_amountStr.length < 12) {
@@ -141,52 +75,64 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
   }
 
-  Future<void> _removeReceipt() async {
-    final urlToDelete = _receiptUrl;
-    setState(() {
-      _receiptFile = null;
-      _receiptUrl = null;
-    });
-    if (urlToDelete != null) {
-      try {
-        await TransactionService.deleteReceipt(urlToDelete);
-      } on DioException catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(WalletService.errorMessage(e))),
-          );
-        }
-      }
-    }
+  Future<void> _showCategoryPicker(TransactionFormState formState) async {
+    final cat = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ItemPickerSheet(
+        title: 'Select Category',
+        items: formState.categories,
+        selectedId: formState.selectedCategory?['id'],
+        type: formState.transactionType,
+        isSub: false,
+      ),
+    );
+    if (cat == null || !mounted) return;
+    context.read<TransactionFormCubit>().setCategory(cat);
+  }
+
+  Future<void> _showSubCategoryPicker(TransactionFormState formState) async {
+    if (formState.selectedCategory == null) return;
+    final categoryName = formState.selectedCategory!['name'] as String;
+    final items = localSubcategories(categoryName, type: formState.transactionType);
+    if (items.isEmpty) return;
+
+    final sub = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ItemPickerSheet(
+        title: categoryName,
+        items: items,
+        selectedId: formState.selectedSubCategory?['id'],
+        type: formState.transactionType,
+        isSub: true,
+      ),
+    );
+    if (sub == null || !mounted) return;
+    context.read<TransactionFormCubit>().setSubCategory(sub);
   }
 
   Future<void> _pickReceipt() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;
-
-    setState(() {
-      _receiptFile = File(picked.path);
-      _uploadingReceipt = true;
-    });
-
-    try {
-      final url = await TransactionService.uploadReceipt(_receiptFile!);
-      if (mounted) setState(() { _receiptUrl = url; });
-    } on DioException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(WalletService.errorMessage(e))),
-        );
-        setState(() { _receiptFile = null; });
-      }
-    } finally {
-      if (mounted) setState(() { _uploadingReceipt = false; });
+    setState(() => _receiptFile = File(picked.path));
+    if (!mounted) return;
+    await context.read<TransactionFormCubit>().uploadReceipt(_receiptFile!);
+    if (mounted && context.read<TransactionFormCubit>().state.receiptUrl == null) {
+      setState(() => _receiptFile = null);
     }
   }
 
-  Future<void> _showSuccessDialog() async {
-    final label = _type == 'income' ? 'Income' : 'Expense';
+  Future<void> _removeReceipt() async {
+    setState(() => _receiptFile = null);
+    await context.read<TransactionFormCubit>().deleteReceipt();
+  }
+
+  Future<void> _showSuccessDialog(String type) async {
+    final label = type == 'income' ? 'Income' : 'Expense';
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -196,39 +142,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (mounted) context.pop();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(TransactionFormState formState) async {
     if (_amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter an amount')),
       );
       return;
     }
-    if (_selectedWallet == null) {
+    if (formState.selectedWallet == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a wallet')),
       );
       return;
     }
-    setState(() => _submitting = true);
-    try {
-      await TransactionService.createTransaction(
-        type: _type,
-        amount: _amount,
-        description: _titleController.text,
-        categoryId: _selectedCategory?['id'] as int?,
-        subCategoryId: _selectedSubCategory?['id'] as int?,
-        walletId: _selectedWallet!['id'] as int?,
-        receiptImageUrl: _receiptUrl,
-      );
-      if (mounted) await _showSuccessDialog();
-    } on DioException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(WalletService.errorMessage(e))),
-        );
-      }
-      setState(() => _submitting = false);
-    }
+    await context.read<TransactionFormCubit>().submit(
+      amount: _amount,
+      description: _titleController.text,
+      note: _noteController.text,
+      date: DateTime.now(),
+    );
   }
 
   @override
@@ -240,357 +172,369 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = _type == 'income';
-    final label = isIncome ? 'Add Income' : 'Add Expense';
+    return BlocConsumer<TransactionFormCubit, TransactionFormState>(
+      listenWhen: (prev, curr) =>
+          curr.submitSuccess != prev.submitSuccess ||
+          curr.submitError != prev.submitError,
+      listener: (context, state) {
+        if (state.submitSuccess) {
+          _showSuccessDialog(state.transactionType);
+        } else if (state.submitError != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.submitError!)),
+          );
+        }
+      },
+      builder: (context, formState) {
+        final isIncome = formState.transactionType == 'income';
+        final label = isIncome ? 'Add Income' : 'Add Expense';
+        final receiptUrl = formState.receiptUrl;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── App bar ────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
-                    onPressed: () => context.pop(),
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ── App bar ──────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
+                        color: AppColors.labelText,
+                        onPressed: () => context.pop(),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Add Transaction',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.labelText,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
                   ),
-                  Expanded(
-                    child: Text(
-                      'Add Transaction',
-                      textAlign: TextAlign.center,
+                ),
+
+                // ── Income / Expense toggle ──────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: Row(
+                      children: [
+                        _ToggleTab(
+                          label: 'Income',
+                          selected: isIncome,
+                          onTap: () => context
+                              .read<TransactionFormCubit>()
+                              .setType('income'),
+                        ),
+                        _ToggleTab(
+                          label: 'Expense',
+                          selected: !isIncome,
+                          onTap: () => context
+                              .read<TransactionFormCubit>()
+                              .setType('expense'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Amount display ───────────────────────────────────────
+                Column(
+                  children: [
+                    Text(
+                      label,
                       style: GoogleFonts.urbanist(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.placeholderText,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formattedAmount,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.labelText,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
-
-            // ── Income / Expense toggle ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                child: Row(
-                  children: [
-                    _ToggleTab(
-                      label: 'Income',
-                      selected: isIncome,
-                      onTap: () {
-                        setState(() {
-                          _type = 'income';
-                          _selectedCategory = null;
-                          _selectedSubCategory = null;
-                        });
-                        _reloadCategories();
-                      },
-                    ),
-                    _ToggleTab(
-                      label: 'Expense',
-                      selected: !isIncome,
-                      onTap: () {
-                        setState(() {
-                          _type = 'expense';
-                          _selectedCategory = null;
-                          _selectedSubCategory = null;
-                        });
-                        _reloadCategories();
-                      },
+                    Text(
+                      'Enter Amount',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 12,
+                        color: AppColors.placeholderText,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-            // ── Amount display ─────────────────────────────────────────────
-            Column(
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.urbanist(
-                    fontSize: 13,
-                    color: AppColors.placeholderText,
+                // ── Category + Sub-category pills ────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _CategoryPill(
+                          label: formState.selectedCategory != null
+                              ? formState.selectedCategory!['name'] as String
+                              : 'Category',
+                          icon: formState.selectedCategory != null
+                              ? _CategoryIcon(
+                                  name: formState.selectedCategory!['name'] as String,
+                                  isSub: false,
+                                  size: 18,
+                                  type: formState.transactionType,
+                                )
+                              : const Icon(Icons.grid_view_rounded,
+                                  size: 16, color: AppColors.placeholderText),
+                          hasValue: formState.selectedCategory != null,
+                          enabled: formState.categories.isNotEmpty,
+                          onTap: () => _showCategoryPicker(formState),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _CategoryPill(
+                          label: formState.selectedSubCategory != null
+                              ? formState.selectedSubCategory!['name'] as String
+                              : 'Sub-category',
+                          icon: formState.selectedSubCategory != null
+                              ? _CategoryIcon(
+                                  name: formState.selectedSubCategory!['name'] as String,
+                                  isSub: true,
+                                  size: 18,
+                                  type: formState.transactionType,
+                                )
+                              : const Icon(Icons.list_rounded,
+                                  size: 16, color: AppColors.placeholderText),
+                          hasValue: formState.selectedSubCategory != null,
+                          enabled: formState.selectedCategory != null,
+                          onTap: () => _showSubCategoryPicker(formState),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _formattedAmount,
-                  style: GoogleFonts.urbanist(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.labelText,
+
+                const SizedBox(height: 10),
+
+                // ── Input row 1: Title + Wallet ──────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _InputField(
+                          controller: _titleController,
+                          hint: 'Title',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _WalletPicker(
+                        wallets: formState.wallets,
+                        selected: formState.selectedWallet,
+                        onChanged: (w) =>
+                            context.read<TransactionFormCubit>().setWallet(w),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  'Enter Amount',
-                  style: GoogleFonts.urbanist(
-                    fontSize: 12,
-                    color: AppColors.placeholderText,
+
+                const SizedBox(height: 10),
+
+                // ── Input row 2: Note + Attach ───────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _InputField(
+                          controller: _noteController,
+                          hint: 'Note',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) {
+                          if (receiptUrl != null) {
+                            setState(() => _receiptHovered = true);
+                          }
+                        },
+                        onExit: (_) => setState(() => _receiptHovered = false),
+                        child: GestureDetector(
+                          onTap: (formState.uploadingReceipt || formState.submitting)
+                              ? null
+                              : (receiptUrl != null && _receiptHovered)
+                                  ? _removeReceipt
+                                  : (receiptUrl == null)
+                                      ? _pickReceipt
+                                      : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: receiptUrl != null
+                                  ? (_receiptHovered
+                                      ? AppColors.expense.withValues(alpha: 0.12)
+                                      : const Color(0xFF5AC45A).withValues(alpha: 0.15))
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                            child: formState.uploadingReceipt
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedSwitcher(
+                                        duration: const Duration(milliseconds: 200),
+                                        child: Icon(
+                                          receiptUrl != null
+                                              ? (_receiptHovered
+                                                  ? Icons.delete_outline_rounded
+                                                  : Icons.check_circle_rounded)
+                                              : Icons.attach_file_rounded,
+                                          key: ValueKey(
+                                            receiptUrl != null
+                                                ? (_receiptHovered ? 'remove' : 'check')
+                                                : 'add',
+                                          ),
+                                          size: 16,
+                                          color: receiptUrl != null
+                                              ? (_receiptHovered
+                                                  ? AppColors.expense
+                                                  : const Color(0xFF5AC45A))
+                                              : AppColors.placeholderText,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      AnimatedDefaultTextStyle(
+                                        duration: const Duration(milliseconds: 200),
+                                        style: GoogleFonts.urbanist(
+                                          fontSize: 13,
+                                          fontWeight: _receiptHovered && receiptUrl != null
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                          color: receiptUrl != null
+                                              ? (_receiptHovered
+                                                  ? AppColors.expense
+                                                  : const Color(0xFF5AC45A))
+                                              : AppColors.placeholderText,
+                                        ),
+                                        child: Text(
+                                          receiptUrl != null
+                                              ? (_receiptHovered ? 'Remove' : 'Receipt')
+                                              : 'Add',
+                                        ),
+                                      ),
+                                      if (receiptUrl != null && !_receiptHovered) ...[
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: formState.submitting
+                                              ? null
+                                              : _removeReceipt,
+                                          child: const Icon(
+                                            Icons.close_rounded,
+                                            size: 14,
+                                            color: Color(0xFF5AC45A),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-            // ── Category + Sub-category pills ──────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _CategoryPill(
-                      label: _selectedCategory != null
-                          ? _selectedCategory!['name'] as String
-                          : 'Category',
-                      icon: _selectedCategory != null
-                          ? _CategoryIcon(
-                              name: _selectedCategory!['name'] as String,
-                              isSub: false,
-                              size: 18,
-                              type: _type,
-                            )
-                          : const Icon(Icons.grid_view_rounded,
-                              size: 16, color: AppColors.placeholderText),
-                      hasValue: _selectedCategory != null,
-                      enabled: _categories.isNotEmpty,
-                      onTap: _showCategoryPicker,
-                    ),
+                // ── Numpad ───────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      _NumRow(keys: ['1', '2', '3'], onDigit: _onDigit, onBackspace: _onBackspace),
+                      const SizedBox(height: 10),
+                      _NumRow(keys: ['4', '5', '6'], onDigit: _onDigit, onBackspace: _onBackspace),
+                      const SizedBox(height: 10),
+                      _NumRow(keys: ['7', '8', '9'], onDigit: _onDigit, onBackspace: _onBackspace),
+                      const SizedBox(height: 10),
+                      _NumLastRow(onDigit: _onDigit, onBackspace: _onBackspace),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _CategoryPill(
-                      label: _selectedSubCategory != null
-                          ? _selectedSubCategory!['name'] as String
-                          : 'Sub-category',
-                      icon: _selectedSubCategory != null
-                          ? _CategoryIcon(
-                              name: _selectedSubCategory!['name'] as String,
-                              isSub: true,
-                              size: 18,
-                              type: _type,
-                            )
-                          : const Icon(Icons.list_rounded,
-                              size: 16, color: AppColors.placeholderText),
-                      hasValue: _selectedSubCategory != null,
-                      enabled: _selectedCategory != null,
-                      onTap: _showSubCategoryPicker,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: 10),
+                const SizedBox(height: 16),
 
-            // ── Input row 1: Title + Wallet ────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _InputField(
-                      controller: _titleController,
-                      hint: 'Title',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _WalletPicker(
-                    wallets: _wallets,
-                    selected: _selectedWallet,
-                    onChanged: (w) => setState(() => _selectedWallet = w),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // ── Input row 2: Note + Attach ─────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _InputField(
-                      controller: _noteController,
-                      hint: 'Note',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    onEnter: (_) {
-                      if (_receiptUrl != null) {
-                        setState(() => _receiptHovered = true);
-                      }
-                    },
-                    onExit: (_) => setState(() => _receiptHovered = false),
-                    child: GestureDetector(
-                      onTap: (_uploadingReceipt || _submitting)
+                // ── Submit button ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: formState.submitting
                           ? null
-                          : (_receiptUrl != null && _receiptHovered)
-                              ? _removeReceipt
-                              : (_receiptUrl == null)
-                                  ? _pickReceipt
-                                  : null,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        height: 44,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: _receiptUrl != null
-                              ? (_receiptHovered
-                                  ? AppColors.expense.withValues(alpha: 0.12)
-                                  : const Color(0xFF5AC45A).withValues(alpha: 0.15))
-                              : Colors.transparent,
+                          : () => _submit(formState),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(40),
                         ),
-                        child: _uploadingReceipt
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Icon(
-                                      _receiptUrl != null
-                                          ? (_receiptHovered
-                                              ? Icons.delete_outline_rounded
-                                              : Icons.check_circle_rounded)
-                                          : Icons.attach_file_rounded,
-                                      key: ValueKey(
-                                        _receiptUrl != null
-                                            ? (_receiptHovered ? 'remove' : 'check')
-                                            : 'add',
-                                      ),
-                                      size: 16,
-                                      color: _receiptUrl != null
-                                          ? (_receiptHovered
-                                              ? AppColors.expense
-                                              : const Color(0xFF5AC45A))
-                                          : AppColors.placeholderText,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  AnimatedDefaultTextStyle(
-                                    duration: const Duration(milliseconds: 200),
-                                    style: GoogleFonts.urbanist(
-                                      fontSize: 13,
-                                      fontWeight: _receiptHovered && _receiptUrl != null
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: _receiptUrl != null
-                                          ? (_receiptHovered
-                                              ? AppColors.expense
-                                              : const Color(0xFF5AC45A))
-                                          : AppColors.placeholderText,
-                                    ),
-                                    child: Text(
-                                      _receiptUrl != null
-                                          ? (_receiptHovered ? 'Remove' : 'Receipt')
-                                          : 'Add',
-                                    ),
-                                  ),
-                                  if (_receiptUrl != null && !_receiptHovered) ...[
-                                    const SizedBox(width: 6),
-                                    GestureDetector(
-                                      onTap: _submitting ? null : _removeReceipt,
-                                      child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 14,
-                                        color: Color(0xFF5AC45A),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                        elevation: 0,
                       ),
+                      child: formState.submitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              label,
+                              style: GoogleFonts.urbanist(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Numpad ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  _NumRow(keys: ['1', '2', '3'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 10),
-                  _NumRow(keys: ['4', '5', '6'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 10),
-                  _NumRow(keys: ['7', '8', '9'], onDigit: _onDigit, onBackspace: _onBackspace),
-                  const SizedBox(height: 10),
-                  _NumLastRow(onDigit: _onDigit, onBackspace: _onBackspace),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Submit button ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _submitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          label,
-                          style: GoogleFonts.urbanist(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1228,7 +1172,12 @@ class _NumLastRow extends StatelessWidget {
             child: _NumKey(label: '0', onTap: () => onDigit('0')),
           ),
         ),
-        const Expanded(child: SizedBox()),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _NumKey(label: '00', onTap: () => onDigit('00')),
+          ),
+        ),
       ],
     );
   }

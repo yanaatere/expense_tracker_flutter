@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,40 +10,46 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
-import '../../core/models/wallet.dart';
 import '../../core/services/api_client.dart';
-import '../../core/services/transaction_service.dart';
-import '../../core/services/wallet_service.dart';
-import '../../service_locator.dart';
+import 'cubit/transaction_form_cubit.dart';
+import 'cubit/transaction_form_state.dart';
 
-class EditTransactionScreen extends StatefulWidget {
+class EditTransactionScreen extends StatelessWidget {
   final Map<String, dynamic> data;
   const EditTransactionScreen({super.key, required this.data});
 
   @override
-  State<EditTransactionScreen> createState() => _EditTransactionScreenState();
+  Widget build(BuildContext context) {
+    final type = data['type'] as String? ?? 'expense';
+    final rawReceipt = data['receipt_image_url'] as String?;
+    return BlocProvider(
+      create: (_) => TransactionFormCubit()
+        ..loadData(
+          type: type,
+          existingData: data,
+          existingReceiptUrl: (rawReceipt?.isNotEmpty ?? false) ? rawReceipt : null,
+        ),
+      child: _EditTransactionView(data: data),
+    );
+  }
 }
 
-class _EditTransactionScreenState extends State<EditTransactionScreen> {
-  late String _type;
+class _EditTransactionView extends StatefulWidget {
+  final Map<String, dynamic> data;
+  const _EditTransactionView({required this.data});
+
+  @override
+  State<_EditTransactionView> createState() => _EditTransactionViewState();
+}
+
+class _EditTransactionViewState extends State<_EditTransactionView> {
+  late final String _type;
   late double _amount;
   late final TextEditingController _titleController;
   late final TextEditingController _noteController;
-
-  Map<String, dynamic>? _selectedCategory;
-  Map<String, dynamic>? _selectedSubCategory;
-
-  List<Map<String, dynamic>> _wallets = [];
-  Map<String, dynamic>? _selectedWallet;
-
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
-
-  String? _receiptUrl;
   File? _receiptFile;
-  bool _uploadingReceipt = false;
-
-  bool _submitting = false;
 
   @override
   void initState() {
@@ -57,75 +63,26 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
     _titleController = TextEditingController(text: d['description'] as String? ?? '');
     _noteController = TextEditingController(text: d['notes'] as String? ?? '');
-    _receiptUrl = (d['receipt_image_url'] as String? ?? '').isEmpty ? null : d['receipt_image_url'] as String?;
 
-    // Resolve date
     try {
       _selectedDate = DateTime.parse(d['transaction_date'] as String? ?? '');
     } catch (_) {
       _selectedDate = DateTime.now();
     }
 
-    // Resolve time from created_at
     try {
       final dt = DateTime.parse(d['created_at'] as String? ?? '');
       _selectedTime = TimeOfDay(hour: dt.hour, minute: dt.minute);
     } catch (_) {
       _selectedTime = TimeOfDay.now();
     }
-
-    // Resolve pre-selected category
-    final rawCatId = d['category_id'];
-    if (rawCatId != null) {
-      final catId = rawCatId is int ? rawCatId : int.tryParse(rawCatId.toString());
-      if (catId != null) {
-        final cats = localCategories(type: _type);
-        final match = cats.firstWhere((c) => c['id'] == catId, orElse: () => {});
-        if (match.isNotEmpty) _selectedCategory = match;
-      }
-    }
-
-    // Resolve pre-selected subcategory
-    final rawSubId = d['sub_category_id'];
-    if (rawSubId != null && _selectedCategory != null) {
-      final subId = rawSubId is int ? rawSubId : int.tryParse(rawSubId.toString());
-      if (subId != null) {
-        final subs = localSubcategories(_selectedCategory!['name'] as String, type: _type);
-        final match = subs.firstWhere((s) => s['id'] == subId, orElse: () => {});
-        if (match.isNotEmpty) _selectedSubCategory = match;
-      }
-    }
-
-    _loadWallets();
   }
 
-  Future<void> _loadWallets() async {
-    final wallets = await ServiceLocator.walletRepository
-        .getWallets()
-        .catchError((_) => <Wallet>[]);
-    if (!mounted) return;
-    final rawWalletId = widget.data['wallet_id'];
-    final walletId = rawWalletId is int ? rawWalletId : int.tryParse(rawWalletId.toString());
-
-    final mapped = wallets
-        .map((w) => <String, dynamic>{
-              'id': w.serverId != null ? int.tryParse(w.serverId!) : null,
-              'name': w.name,
-            })
-        .where((m) => m['id'] != null)
-        .toList();
-
-    Map<String, dynamic>? matched;
-    if (walletId != null) {
-      try {
-        matched = mapped.firstWhere((w) => w['id'] == walletId);
-      } catch (_) {}
-    }
-
-    setState(() {
-      _wallets = mapped;
-      _selectedWallet = matched ?? (mapped.isNotEmpty ? mapped.first : null);
-    });
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _noteController.dispose();
+    super.dispose();
   }
 
   // ── Pickers ──────────────────────────────────────────────────────────────────
@@ -160,7 +117,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     if (picked != null && mounted) setState(() => _selectedTime = picked);
   }
 
-  Future<void> _pickCategory() async {
+  Future<void> _pickCategory(TransactionFormState formState) async {
     final cats = localCategories(type: _type);
     final cat = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -169,21 +126,18 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       builder: (_) => _PickerSheet(
         title: 'Select Category',
         items: cats,
-        selectedId: _selectedCategory?['id'],
+        selectedId: formState.selectedCategory?['id'],
         type: _type,
         isSub: false,
       ),
     );
     if (cat == null || !mounted) return;
-    setState(() {
-      _selectedCategory = cat;
-      _selectedSubCategory = null;
-    });
+    context.read<TransactionFormCubit>().setCategory(cat);
   }
 
-  Future<void> _pickSubCategory() async {
-    if (_selectedCategory == null) return;
-    final name = _selectedCategory!['name'] as String;
+  Future<void> _pickSubCategory(TransactionFormState formState) async {
+    if (formState.selectedCategory == null) return;
+    final name = formState.selectedCategory!['name'] as String;
     final subs = localSubcategories(name, type: _type);
     if (subs.isEmpty) return;
     final sub = await showModalBottomSheet<Map<String, dynamic>>(
@@ -193,27 +147,27 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       builder: (_) => _PickerSheet(
         title: name,
         items: subs,
-        selectedId: _selectedSubCategory?['id'],
+        selectedId: formState.selectedSubCategory?['id'],
         type: _type,
         isSub: true,
       ),
     );
     if (sub == null || !mounted) return;
-    setState(() => _selectedSubCategory = sub);
+    context.read<TransactionFormCubit>().setSubCategory(sub);
   }
 
-  Future<void> _pickWallet() async {
-    if (_wallets.isEmpty) return;
+  Future<void> _pickWallet(TransactionFormState formState) async {
+    if (formState.wallets.isEmpty) return;
     final w = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _WalletSheet(
-        wallets: _wallets,
-        selectedId: _selectedWallet?['id'],
+        wallets: formState.wallets,
+        selectedId: formState.selectedWallet?['id'],
       ),
     );
     if (w == null || !mounted) return;
-    setState(() => _selectedWallet = w);
+    context.read<TransactionFormCubit>().setWallet(w);
   }
 
   Future<void> _editAmount() async {
@@ -229,90 +183,47 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     if (result != null && mounted) setState(() => _amount = result);
   }
 
-  // ── Receipt ──────────────────────────────────────────────────────────────────
-
   Future<void> _pickReceipt() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;
-    setState(() { _receiptFile = File(picked.path); _uploadingReceipt = true; });
-    try {
-      final url = await TransactionService.uploadReceipt(_receiptFile!);
-      if (mounted) setState(() => _receiptUrl = url);
-    } on DioException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(WalletService.errorMessage(e))),
-        );
-        setState(() => _receiptFile = null);
-      }
-    } finally {
-      if (mounted) setState(() => _uploadingReceipt = false);
+    setState(() => _receiptFile = File(picked.path));
+    if (!mounted) return;
+    await context.read<TransactionFormCubit>().uploadReceipt(_receiptFile!);
+    if (mounted && context.read<TransactionFormCubit>().state.receiptUrl == null) {
+      setState(() => _receiptFile = null);
     }
   }
 
   Future<void> _removeReceipt() async {
-    final urlToDelete = _receiptUrl;
-    setState(() { _receiptFile = null; _receiptUrl = null; });
-    if (urlToDelete != null) {
-      try {
-        await TransactionService.deleteReceipt(urlToDelete);
-      } catch (_) {}
-    }
+    setState(() => _receiptFile = null);
+    await context.read<TransactionFormCubit>().deleteReceipt();
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
-
-  Future<void> _submit() async {
+  Future<void> _submit(TransactionFormState formState) async {
     if (_amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter an amount')),
       );
       return;
     }
-    if (_selectedWallet == null) {
+    if (formState.selectedWallet == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a wallet')),
       );
       return;
     }
-
-    setState(() => _submitting = true);
-
     final rawId = widget.data['id'];
     final id = rawId is int ? rawId : int.tryParse(rawId.toString());
-    if (id == null) {
-      setState(() => _submitting = false);
-      return;
-    }
+    if (id == null) return;
 
-    final dateStr =
-        '${_selectedDate.year.toString().padLeft(4, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-
-    try {
-      await TransactionService.updateTransaction(
-        id: id,
-        type: _type,
-        amount: _amount,
-        description: _titleController.text,
-        categoryId: _selectedCategory?['id'] as int?,
-        subCategoryId: _selectedSubCategory?['id'] as int?,
-        walletId: _selectedWallet!['id'] as int?,
-        date: dateStr,
-        receiptImageUrl: _receiptUrl,
-      );
-      if (mounted) {
-        await _showSuccessDialog();
-        context.pop(true); // signal detail screen to refresh
-      }
-    } on DioException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(WalletService.errorMessage(e))),
-        );
-        setState(() => _submitting = false);
-      }
-    }
+    await context.read<TransactionFormCubit>().update(
+      transactionId: id,
+      amount: _amount,
+      description: _titleController.text,
+      date: _selectedDate,
+      time: _selectedTime,
+    );
   }
 
   Future<void> _showSuccessDialog() async {
@@ -355,359 +266,380 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _noteController.dispose();
-    super.dispose();
-  }
-
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = _type == 'income';
-    final amountColor = isIncome ? AppColors.income : AppColors.expense;
-    final typeLabel = isIncome ? 'Income' : 'Spending';
-    final amountPrefix = isIncome ? '+Rp.' : '-Rp.';
-    final formattedAmount = NumberFormat('#,##0', 'en_US').format(_amount);
-    final categoryIconP = _selectedCategory != null
-        ? categoryIconPath(_selectedCategory!['name'] as String, type: _type)
-        : null;
-    final dateLabel = DateFormat('d MMM yyyy').format(_selectedDate);
-    final timeLabel = _selectedTime.format(context);
+    return BlocConsumer<TransactionFormCubit, TransactionFormState>(
+      listenWhen: (prev, curr) =>
+          curr.submitSuccess != prev.submitSuccess ||
+          curr.submitError != prev.submitError,
+      listener: (listenerContext, state) async {
+        if (state.submitSuccess) {
+          final router = GoRouter.of(listenerContext);
+          await _showSuccessDialog();
+          if (!mounted) return;
+          router.pop(true);
+        } else if (state.submitError != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.submitError!)),
+          );
+        }
+      },
+      builder: (context, formState) {
+        final isIncome = _type == 'income';
+        final amountColor = isIncome ? AppColors.income : AppColors.expense;
+        final typeLabel = isIncome ? 'Income' : 'Spending';
+        final amountPrefix = isIncome ? '+Rp.' : '-Rp.';
+        final formattedAmount = NumberFormat('#,##0', 'en_US').format(_amount);
+        final categoryIconP = formState.selectedCategory != null
+            ? categoryIconPath(formState.selectedCategory!['name'] as String,
+                type: _type)
+            : null;
+        final dateLabel = DateFormat('d MMM yyyy').format(_selectedDate);
+        final timeLabel = _selectedTime.format(context);
+        final receiptUrl = formState.receiptUrl;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── App bar ───────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
-                    onPressed: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Transaction Detail',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.urbanist(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ── App bar ─────────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
                         color: AppColors.labelText,
+                        onPressed: () => context.pop(),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
-
-            // ── Amount banner (tap to edit) ───────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              child: GestureDetector(
-                onTap: _editAmount,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: amountColor.withAlpha(20),
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: categoryIconP != null
-                          ? Image.asset(categoryIconP)
-                          : Icon(
-                              isIncome
-                                  ? Icons.trending_up_rounded
-                                  : Icons.trending_down_rounded,
-                              color: amountColor,
-                              size: 28,
-                            ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            typeLabel,
-                            style: GoogleFonts.urbanist(
-                              fontSize: 12,
-                              color: AppColors.placeholderText,
-                            ),
+                      Expanded(
+                        child: Text(
+                          'Transaction Detail',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.labelText,
                           ),
-                          const SizedBox(height: 2),
-                          Row(
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                ),
+
+                // ── Amount banner ────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: GestureDetector(
+                    onTap: _editAmount,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: amountColor.withAlpha(20),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(14),
+                          child: categoryIconP != null
+                              ? Image.asset(categoryIconP)
+                              : Icon(
+                                  isIncome
+                                      ? Icons.trending_up_rounded
+                                      : Icons.trending_down_rounded,
+                                  color: amountColor,
+                                  size: 28,
+                                ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '$amountPrefix $formattedAmount',
+                                typeLabel,
                                 style: GoogleFonts.urbanist(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: amountColor,
+                                  fontSize: 12,
+                                  color: AppColors.placeholderText,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Icon(Icons.edit_outlined, size: 14, color: amountColor.withAlpha(160)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const Divider(height: 1, thickness: 0.5),
-
-            // ── Form ─────────────────────────────────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  children: [
-                    _FormRow(
-                      label: 'Title',
-                      child: _TextInput(controller: _titleController, hint: 'Title'),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'Category',
-                      child: _DropdownField(
-                        iconPath: _selectedCategory != null
-                            ? categoryIconPath(_selectedCategory!['name'] as String, type: _type)
-                            : null,
-                        label: _selectedCategory?['name'] as String? ?? 'Category',
-                        hasValue: _selectedCategory != null,
-                        onTap: _pickCategory,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'For',
-                      child: _DropdownField(
-                        iconPath: _selectedSubCategory != null
-                            ? subCategoryIconPath(_selectedSubCategory!['name'] as String, type: _type)
-                            : null,
-                        label: _selectedSubCategory?['name'] as String? ?? 'Sub-category',
-                        hasValue: _selectedSubCategory != null,
-                        enabled: _selectedCategory != null,
-                        onTap: _pickSubCategory,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'Wallet',
-                      child: _DropdownField(
-                        label: _selectedWallet?['name'] as String? ?? 'Wallet',
-                        hasValue: _selectedWallet != null,
-                        onTap: _pickWallet,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'Date',
-                      child: _DropdownField(
-                        label: dateLabel,
-                        hasValue: true,
-                        onTap: _pickDate,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'Time',
-                      child: _DropdownField(
-                        label: timeLabel,
-                        hasValue: true,
-                        onTap: _pickTime,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _FormRow(
-                      label: 'Note',
-                      child: _TextInput(controller: _noteController, hint: 'Note'),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Attachment ──────────────────────────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Existing receipt
-                        if (_receiptUrl != null || _receiptFile != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Stack(
-                              children: [
-                                GestureDetector(
-                                  onTap: _receiptUrl != null
-                                      ? () => _showFullImage(context, _receiptUrl!)
-                                      : null,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: _receiptFile != null
-                                        ? Image.file(_receiptFile!,
-                                            width: 80, height: 80, fit: BoxFit.cover)
-                                        : Image.network(
-                                            ApiClient.resolveMediaUrl(_receiptUrl!),
-                                            width: 80,
-                                            height: 80,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(
-                                              width: 80,
-                                              height: 80,
-                                              color: AppColors.cardBg,
-                                              child: const Icon(
-                                                Icons.broken_image_outlined,
-                                                color: AppColors.placeholderText,
-                                              ),
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 2,
-                                  right: 2,
-                                  child: GestureDetector(
-                                    onTap: _removeReceipt,
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      padding: const EdgeInsets.all(2),
-                                      child: const Icon(Icons.close_rounded,
-                                          size: 14, color: AppColors.expense),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Text(
+                                    '$amountPrefix $formattedAmount',
+                                    style: GoogleFonts.urbanist(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: amountColor,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Add button
-                        if (_receiptUrl == null && _receiptFile == null)
-                          GestureDetector(
-                            onTap: _uploadingReceipt ? null : _pickReceipt,
-                            child: Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.primary.withAlpha(120),
-                                  width: 1.5,
-                                  strokeAlign: BorderSide.strokeAlignInside,
-                                ),
-                                color: AppColors.primary.withAlpha(10),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.edit_outlined,
+                                      size: 14, color: amountColor.withAlpha(160)),
+                                ],
                               ),
-                              child: _uploadingReceipt
-                                  ? const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.primary,
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    )
-                                  : const Icon(Icons.add_rounded,
-                                      color: AppColors.primary, size: 28),
-                            ),
-                          )
-                        else
-                          GestureDetector(
-                            onTap: _uploadingReceipt ? null : _pickReceipt,
-                            child: Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.primary.withAlpha(120),
-                                  width: 1.5,
-                                  style: BorderStyle.solid,
-                                ),
-                                color: AppColors.primary.withAlpha(10),
-                              ),
-                              child: _uploadingReceipt
-                                  ? const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.primary,
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    )
-                                  : const Icon(Icons.add_rounded,
-                                      color: AppColors.primary, size: 28),
-                            ),
-                          ),
-
-                        const Spacer(),
-                        Text(
-                          'Attachment',
-                          style: GoogleFonts.urbanist(
-                            fontSize: 12,
-                            color: AppColors.placeholderText,
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                  ),
+                ),
 
-                    // ── Save ────────────────────────────────────────────────
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _submitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppColors.primary.withAlpha(120),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                          elevation: 0,
+                const Divider(height: 1, thickness: 0.5),
+
+                // ── Form ─────────────────────────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Column(
+                      children: [
+                        _FormRow(
+                          label: 'Title',
+                          child: _TextInput(controller: _titleController, hint: 'Title'),
                         ),
-                        child: _submitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2),
-                              )
-                            : Text(
-                                'Save',
-                                style: GoogleFonts.urbanist(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'Category',
+                          child: _DropdownField(
+                            iconPath: formState.selectedCategory != null
+                                ? categoryIconPath(
+                                    formState.selectedCategory!['name'] as String,
+                                    type: _type)
+                                : null,
+                            label: formState.selectedCategory?['name'] as String? ??
+                                'Category',
+                            hasValue: formState.selectedCategory != null,
+                            onTap: () => _pickCategory(formState),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'For',
+                          child: _DropdownField(
+                            iconPath: formState.selectedSubCategory != null
+                                ? subCategoryIconPath(
+                                    formState.selectedSubCategory!['name'] as String,
+                                    type: _type)
+                                : null,
+                            label: formState.selectedSubCategory?['name'] as String? ??
+                                'Sub-category',
+                            hasValue: formState.selectedSubCategory != null,
+                            enabled: formState.selectedCategory != null,
+                            onTap: () => _pickSubCategory(formState),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'Wallet',
+                          child: _DropdownField(
+                            label: formState.selectedWallet?['name'] as String? ??
+                                'Wallet',
+                            hasValue: formState.selectedWallet != null,
+                            onTap: () => _pickWallet(formState),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'Date',
+                          child: _DropdownField(
+                            label: dateLabel,
+                            hasValue: true,
+                            onTap: _pickDate,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'Time',
+                          child: _DropdownField(
+                            label: timeLabel,
+                            hasValue: true,
+                            onTap: _pickTime,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _FormRow(
+                          label: 'Note',
+                          child: _TextInput(controller: _noteController, hint: 'Note'),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ── Attachment ────────────────────────────────────────
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (receiptUrl != null || _receiptFile != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: Stack(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: receiptUrl != null
+                                          ? () => _showFullImage(context, receiptUrl)
+                                          : null,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: _receiptFile != null
+                                            ? Image.file(_receiptFile!,
+                                                width: 80,
+                                                height: 80,
+                                                fit: BoxFit.cover)
+                                            : Image.network(
+                                                ApiClient.resolveMediaUrl(receiptUrl!),
+                                                width: 80,
+                                                height: 80,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (ctx, err, stack) => Container(
+                                                  width: 80,
+                                                  height: 80,
+                                                  color: AppColors.cardBg,
+                                                  child: const Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: AppColors.placeholderText,
+                                                  ),
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 2,
+                                      right: 2,
+                                      child: GestureDetector(
+                                        onTap: _removeReceipt,
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: const EdgeInsets.all(2),
+                                          child: const Icon(Icons.close_rounded,
+                                              size: 14, color: AppColors.expense),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                      ),
+                            if (receiptUrl == null && _receiptFile == null)
+                              GestureDetector(
+                                onTap: formState.uploadingReceipt ? null : _pickReceipt,
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColors.primary.withAlpha(120),
+                                      width: 1.5,
+                                      strokeAlign: BorderSide.strokeAlignInside,
+                                    ),
+                                    color: AppColors.primary.withAlpha(10),
+                                  ),
+                                  child: formState.uploadingReceipt
+                                      ? const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        )
+                                      : const Icon(Icons.add_rounded,
+                                          color: AppColors.primary, size: 28),
+                                ),
+                              )
+                            else
+                              GestureDetector(
+                                onTap: formState.uploadingReceipt ? null : _pickReceipt,
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColors.primary.withAlpha(120),
+                                      width: 1.5,
+                                    ),
+                                    color: AppColors.primary.withAlpha(10),
+                                  ),
+                                  child: formState.uploadingReceipt
+                                      ? const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        )
+                                      : const Icon(Icons.add_rounded,
+                                          color: AppColors.primary, size: 28),
+                                ),
+                              ),
+                            const Spacer(),
+                            Text(
+                              'Attachment',
+                              style: GoogleFonts.urbanist(
+                                fontSize: 12,
+                                color: AppColors.placeholderText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+
+                        // ── Save ──────────────────────────────────────────────
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: formState.submitting
+                                ? null
+                                : () => _submit(formState),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: AppColors.primary.withAlpha(120),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: formState.submitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Text(
+                                    'Save',
+                                    style: GoogleFonts.urbanist(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
