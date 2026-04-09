@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/models/wallet.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../service_locator.dart';
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
@@ -88,7 +89,8 @@ class WalletCardWidget extends StatelessWidget {
   String get _name => nameOverride ?? wallet.name;
   double get _balance => balanceOverride ?? wallet.balance;
   String get _currency => currencyOverride ?? wallet.currency;
-  String? get _backdrop => backdropOverride ?? wallet.backdropImage;
+  String? get _backdrop =>
+      backdropOverride ?? wallet.backdropImage ?? ServiceLocator.cardThemeNotifier.value;
 
   @override
   Widget build(BuildContext context) {

@@ -14,6 +14,19 @@ import '../../core/storage/local_storage.dart';
 import '../../core/theme/app_colors_theme.dart';
 import '../../service_locator.dart';
 
+const _kCardBackdrops = [
+  'assets/images/backdrop_wallets/Card 1.webp',
+  'assets/images/backdrop_wallets/Card 2.webp',
+  'assets/images/backdrop_wallets/Card 3.webp',
+  'assets/images/backdrop_wallets/Card 4.webp',
+  'assets/images/backdrop_wallets/Card 5.webp',
+  'assets/images/backdrop_wallets/Card 6.webp',
+  'assets/images/backdrop_wallets/Card 7.webp',
+  'assets/images/backdrop_wallets/Card 8.webp',
+  'assets/images/backdrop_wallets/Card 9.webp',
+  'assets/images/backdrop_wallets/Card 10.webp',
+];
+
 // ---------------------------------------------------------------------------
 // Account Info Screen
 // ---------------------------------------------------------------------------
@@ -397,7 +410,7 @@ body: SafeArea(
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/CardTheme.webp',
                           label: 'Card Theme',
-                          onTap: () {},
+                          onTap: () => _showCardThemePicker(context),
                         ),
                         _ThemeModeItem(),
                       ],
@@ -410,6 +423,14 @@ body: SafeArea(
                     const SizedBox(height: 8),
                     _MenuGroup(
                       items: [
+                        _MenuItem(
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'AI Assistant',
+                          onTap: _isPremium
+                              ? () => context.push('/ai/chat')
+                              : () => context.push('/premium'),
+                          trailing: _isPremium ? null : const _PremiumBadge(),
+                        ),
                         _MenuItem(
                           icon: Icons.help_outline_rounded,
                           label: 'Help and Support',
@@ -456,6 +477,15 @@ body: SafeArea(
           ],
         ),
       ),
+    );
+  }
+
+  void _showCardThemePicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _CardThemeSheet(),
     );
   }
 
@@ -640,6 +670,151 @@ class _MenuItem extends StatelessWidget {
             color: context.appColors.inputBorder.withAlpha(180),
           ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card theme picker sheet
+// ---------------------------------------------------------------------------
+
+class _CardThemeSheet extends StatelessWidget {
+  const _CardThemeSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
+      decoration: BoxDecoration(
+        color: context.appColors.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: context.appColors.inputBorder,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              children: [
+                Text(
+                  'Card Theme',
+                  style: GoogleFonts.urbanist(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: context.appColors.labelText,
+                  ),
+                ),
+                const Spacer(),
+                // "No theme" / reset option
+                ValueListenableBuilder<String?>(
+                  valueListenable: ServiceLocator.cardThemeNotifier,
+                  builder: (context, current, _) => TextButton(
+                    onPressed: current == null
+                        ? null
+                        : () async {
+                            ServiceLocator.cardThemeNotifier.value = null;
+                            await LocalStorage.setDefaultCardTheme('');
+                          },
+                    child: Text(
+                      'Reset',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 13,
+                        color: current == null
+                            ? context.appColors.placeholderText
+                            : AppColors.expense,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<String?>(
+              valueListenable: ServiceLocator.cardThemeNotifier,
+              builder: (context, selected, _) {
+                return GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.65,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: _kCardBackdrops.length,
+                  itemBuilder: (context, i) {
+                    final path = _kCardBackdrops[i];
+                    final isSelected = selected == path;
+                    return GestureDetector(
+                      onTap: () async {
+                        ServiceLocator.cardThemeNotifier.value = path;
+                        await LocalStorage.setDefaultCardTheme(path);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            width: 2.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(30),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(path, fit: BoxFit.cover),
+                              if (isSelected)
+                                Container(
+                                  color: AppColors.primary.withAlpha(40),
+                                  alignment: Alignment.topRight,
+                                  padding: const EdgeInsets.all(6),
+                                  child: Container(
+                                    width: 22,
+                                    height: 22,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -142,6 +142,21 @@ class LocalStorage {
     return prefs.getBool(_pinEnabledKey) ?? false;
   }
 
+  // ── Default card theme (shared prefs) ───────────────────────────────────────
+
+  static const _defaultCardThemeKey = 'default_card_theme';
+
+  static Future<void> setDefaultCardTheme(String assetPath) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_defaultCardThemeKey, assetPath);
+  }
+
+  static Future<String?> getDefaultCardTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getString(_defaultCardThemeKey);
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
   // ── Theme mode (shared prefs) ───────────────────────────────────────────────
 
   static const _themeModeKey = 'theme_mode';

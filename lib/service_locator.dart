@@ -25,6 +25,7 @@ class ServiceLocator {
   static late BudgetDao budgetDao;
   static late ValueNotifier<Locale> localeNotifier;
   static late ValueNotifier<ThemeMode> themeNotifier;
+  static late ValueNotifier<String?> cardThemeNotifier;
   static StreamSubscription<bool>? _connectivitySubscription;
 
   static Future<void> setup() async {
@@ -34,6 +35,9 @@ class ServiceLocator {
 
     final savedLocale = await LocalStorage.getLocale();
     localeNotifier = ValueNotifier(Locale(savedLocale ?? 'en'));
+
+    final savedCardTheme = await LocalStorage.getDefaultCardTheme();
+    cardThemeNotifier = ValueNotifier(savedCardTheme);
 
     final savedTheme = await LocalStorage.getThemeMode();
     themeNotifier = ValueNotifier(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,9 +9,11 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
+import '../../core/services/ai_service.dart';
+import '../../core/storage/local_storage.dart';
 import 'cubit/transaction_form_cubit.dart';
 import 'cubit/transaction_form_state.dart';
-import '../../../core/theme/app_colors_theme.dart';
+import '../../core/theme/app_colors_theme.dart';
 
 class AddTransactionScreen extends StatelessWidget {
   const AddTransactionScreen({super.key});
@@ -37,6 +40,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
   final _noteController = TextEditingController();
   File? _receiptFile;
   bool _receiptHovered = false;
+  bool _scanning = false;
 
   double get _amount => double.tryParse(_amountStr) ?? 0;
 
@@ -132,6 +136,72 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
     await context.read<TransactionFormCubit>().deleteReceipt();
   }
 
+  Future<void> _scanReceipt() async {
+    final isPremium = await LocalStorage.isPremium();
+    if (!mounted) return;
+    if (!isPremium) {
+      await context.push('/premium');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1280,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _scanning = true);
+
+    try {
+      final bytes = await File(picked.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final result = await AiService.scanReceipt(base64Image);
+
+      if (!mounted) return;
+
+      // Fill amount
+      final amount = (result['amount'] as num?)?.toDouble();
+      if (amount != null && amount > 0) {
+        setState(() => _amountStr = amount.toStringAsFixed(0));
+      }
+
+      // Fill title
+      final title = result['title'] as String?;
+      if (title != null && title.isNotEmpty) {
+        _titleController.text = title;
+      }
+
+      // Auto-select category
+      final categoryName = result['category'] as String?;
+      if (categoryName != null && categoryName.isNotEmpty) {
+        final cubit = context.read<TransactionFormCubit>();
+        final type = cubit.state.transactionType;
+        final cats = localCategories(type: type);
+        final match = cats.firstWhere(
+          (c) => (c['name'] as String).toLowerCase() ==
+              categoryName.toLowerCase(),
+          orElse: () => {},
+        );
+        if (match.isNotEmpty) cubit.setCategory(match);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receipt scanned successfully!')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Scan failed. Please fill in manually.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
   Future<void> _showSuccessDialog(String type) async {
     final label = type == 'income' ? 'Income' : 'Expense';
     await showDialog<void>(
@@ -216,7 +286,26 @@ body: SafeArea(
                           ),
                         ),
                       ),
-                      const SizedBox(width: 48),
+                      _scanning
+                          ? const SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Padding(
+                                padding: EdgeInsets.all(14),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(
+                                  Icons.document_scanner_rounded,
+                                  size: 24),
+                              color: AppColors.primary,
+                              tooltip: 'Scan Receipt',
+                              onPressed: _scanReceipt,
+                            ),
                     ],
                   ),
                 ),

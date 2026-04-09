@@ -11,6 +11,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_colors_theme.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/models/transaction.dart';
+import '../../core/storage/local_storage.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 
@@ -131,6 +132,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     child: _QuickActions(onWalletReturn: cubit.refresh),
                   ),
                 ),
+
+                // ── AI Report card (premium only) ─────────────────────────
+                const SliverToBoxAdapter(child: _AiReportCard()),
 
                 // ── Recent Transactions ──────────────────────────────────
                 SliverToBoxAdapter(
@@ -421,6 +425,93 @@ class _StatColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick Actions
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// AI Report Card
+// ---------------------------------------------------------------------------
+
+class _AiReportCard extends StatefulWidget {
+  const _AiReportCard();
+
+  @override
+  State<_AiReportCard> createState() => _AiReportCardState();
+}
+
+class _AiReportCardState extends State<_AiReportCard> {
+  bool _isPremium = false;
+
+  @override
+  void initState() {
+    super.initState();
+    LocalStorage.isPremium().then((v) {
+      if (mounted) setState(() => _isPremium = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isPremium) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final monthLabel = months[now.month - 1];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: GestureDetector(
+        onTap: () => context.push('/ai/report'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF635AFF), Color(0xFF9B8FFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  color: Colors.white, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$monthLabel AI Report',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'See your spending insights',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

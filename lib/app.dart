@@ -36,6 +36,8 @@ import 'features/recurring/recurring_screen.dart';
 import 'features/recurring/add_recurring_screen.dart';
 import 'features/recurring/recurring_detail_screen.dart';
 import 'features/welcome/welcome_screen.dart';
+import 'features/ai/ai_chat_screen.dart';
+import 'features/ai/ai_report_screen.dart';
 
 class MonexApp extends StatefulWidget {
   const MonexApp({super.key});
@@ -317,6 +319,14 @@ final _router = GoRouter(
         if (data == null) return const HomeScreen();
         return EditTransactionScreen(data: data);
       },
+    ),
+    GoRoute(
+      path: '/ai/chat',
+      builder: (context, state) => const AiChatScreen(),
+    ),
+    GoRoute(
+      path: '/ai/report',
+      builder: (context, state) => const AiReportScreen(),
     ),
   ],
 );
