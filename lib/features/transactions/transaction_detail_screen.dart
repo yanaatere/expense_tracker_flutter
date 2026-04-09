@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/services/api_client.dart';
 import '../../core/services/transaction_service.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 // ---------------------------------------------------------------------------
 // Transaction Detail Screen
@@ -96,14 +97,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ),
         content: Text(
           'Are you sure you want to delete this transaction? This cannot be undone.',
-          style: GoogleFonts.urbanist(color: AppColors.bodyText),
+          style: GoogleFonts.urbanist(color: context.appColors.bodyText),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'Cancel',
-              style: GoogleFonts.urbanist(color: AppColors.placeholderText),
+              style: GoogleFonts.urbanist(color: context.appColors.placeholderText),
             ),
           ),
           TextButton(
@@ -182,18 +183,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     final amountStr = _isIncome ? '+Rp. $formattedAmount' : '-Rp. $formattedAmount';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    icon: Icon(Icons.chevron_left_rounded, size: 28),
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -203,7 +203,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -229,7 +229,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             // ── Scrollable body ────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -247,7 +247,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           ),
                           padding: const EdgeInsets.all(14),
                           child: categoryIconP != null
-                              ? Image.asset(categoryIconP)
+                              ? Image.asset(
+                                  categoryIconP,
+                                  color: categoryColor(categoryName, type: _type),
+                                  colorBlendMode: BlendMode.srcIn,
+                                )
                               : Icon(
                                   _isIncome
                                       ? Icons.trending_up_rounded
@@ -256,7 +260,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                                   size: 28,
                                 ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +269,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                                 typeLabel,
                                 style: GoogleFonts.urbanist(
                                   fontSize: 12,
-                                  color: AppColors.placeholderText,
+                                  color: context.appColors.placeholderText,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -283,14 +287,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // ── Detail card ───────────────────────────────────────
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.inputBorder),
+                        border: Border.all(color: context.appColors.inputBorder),
                       ),
                       child: Column(
                         children: [
@@ -300,12 +304,18 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                             label: 'Category',
                             value: categoryName.isNotEmpty ? categoryName : '—',
                             iconPath: categoryIconP,
+                            iconColor: categoryName.isNotEmpty
+                                ? categoryColor(categoryName, type: _type)
+                                : null,
                           ),
                           _rowDivider(),
                           _DetailRowWithIcon(
                             label: 'For',
                             value: subCategoryName.isNotEmpty ? subCategoryName : '—',
                             iconPath: subCategoryIconP,
+                            iconColor: subCategoryName.isNotEmpty
+                                ? subCategoryColor(subCategoryName, type: _type)
+                                : null,
                           ),
                           _rowDivider(),
                           _DetailRow(
@@ -332,11 +342,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
             // ── Bottom action buttons ──────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 10, 20, 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
-                  top: BorderSide(color: AppColors.inputBorder.withAlpha(180)),
+                  top: BorderSide(color: context.appColors.inputBorder.withAlpha(180)),
                 ),
               ),
               child: Row(
@@ -432,23 +442,23 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           Text(
             label,
             style: GoogleFonts.urbanist(
               fontSize: 13,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           Text(
             value.isNotEmpty ? value : '—',
             style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.labelText,
+              color: context.appColors.labelText,
             ),
           ),
         ],
@@ -461,37 +471,43 @@ class _DetailRowWithIcon extends StatelessWidget {
   final String label;
   final String value;
   final String? iconPath;
+  final Color? iconColor;
   const _DetailRowWithIcon({
     required this.label,
     required this.value,
     this.iconPath,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           Text(
             label,
             style: GoogleFonts.urbanist(
               fontSize: 13,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           if (iconPath != null) ...[
             Container(
               width: 26,
               height: 26,
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.all(5),
+              margin: EdgeInsets.only(right: 8),
+              padding: EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: AppColors.cardBg,
+                color: context.appColors.cardBg,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Image.asset(iconPath!),
+              child: Image.asset(
+                iconPath!,
+                color: iconColor,
+                colorBlendMode: iconColor != null ? BlendMode.srcIn : null,
+              ),
             ),
           ],
           Text(
@@ -499,7 +515,7 @@ class _DetailRowWithIcon extends StatelessWidget {
             style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.labelText,
+              color: context.appColors.labelText,
             ),
           ),
         ],
@@ -563,28 +579,28 @@ class _AttachmentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Text(
             'Attachment',
             style: GoogleFonts.urbanist(
               fontSize: 13,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           if (url.isEmpty)
             Container(
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.cardBg,
+                color: context.appColors.cardBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.image_not_supported_outlined,
-                color: AppColors.placeholderText,
+                color: context.appColors.placeholderText,
                 size: 28,
               ),
             )
@@ -606,7 +622,7 @@ class _AttachmentRow extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: AppColors.cardBg,
+                      color: context.appColors.cardBg,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Center(
@@ -621,12 +637,12 @@ class _AttachmentRow extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.cardBg,
+                    color: context.appColors.cardBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.broken_image_outlined,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                     size: 28,
                   ),
                 ),

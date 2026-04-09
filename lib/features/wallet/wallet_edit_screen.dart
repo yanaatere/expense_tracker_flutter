@@ -12,6 +12,7 @@ import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
 import '../../shared/widgets/amount_numpad.dart';
 import '../../shared/widgets/wallet_card.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetCtx) {
@@ -155,13 +156,13 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'Choose Card Background',
                     style: GoogleFonts.urbanist(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -278,18 +279,17 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    icon: Icon(Icons.chevron_left_rounded, size: 28),
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -299,7 +299,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -311,7 +311,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
             // ── Scrollable body ──────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -327,7 +327,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       backdropOverride: _backdropImage,
                     ),
 
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
 
                     // Customize Card link
                     Center(
@@ -344,7 +344,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
 
                     // ── Card Information title ───────────────────────────────
                     Center(
@@ -353,12 +353,12 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                         style: GoogleFonts.urbanist(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.labelText,
+                          color: context.appColors.labelText,
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // ── Type + Goals row ─────────────────────────────────────
                     Row(
@@ -376,7 +376,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                           t,
                                           style: GoogleFonts.urbanist(
                                             fontSize: 14,
-                                            color: AppColors.placeholderText,
+                                            color: context.appColors.placeholderText,
                                           ),
                                         ),
                                       ))
@@ -398,7 +398,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // ── Wallet Name ──────────────────────────────────────────
                     _EditField(
@@ -414,7 +414,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                           o.name,
                                           style: GoogleFonts.urbanist(
                                             fontSize: 14,
-                                            color: AppColors.placeholderText,
+                                            color: context.appColors.placeholderText,
                                           ),
                                         ),
                                       ))
@@ -430,7 +430,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                             ),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // ── Currency ─────────────────────────────────────────────
                     _EditField(
@@ -444,7 +444,7 @@ class _WalletEditScreenState extends State<WalletEditScreen> {
                                     c['label']!,
                                     style: GoogleFonts.urbanist(
                                       fontSize: 14,
-                                      color: AppColors.placeholderText,
+                                      color: context.appColors.placeholderText,
                                     ),
                                   ),
                                 ))
@@ -546,7 +546,7 @@ class _EditField extends StatelessWidget {
           style: GoogleFonts.urbanist(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: AppColors.labelText,
+            color: context.appColors.labelText,
           ),
         ),
         const SizedBox(height: 6),
@@ -574,15 +574,15 @@ class _InputField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: GoogleFonts.urbanist(fontSize: 14, color: AppColors.placeholderText),
+      style: GoogleFonts.urbanist(fontSize: 14, color: context.appColors.placeholderText),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: GoogleFonts.urbanist(
           fontSize: 14,
-          color: AppColors.placeholderText,
+          color: context.appColors.placeholderText,
         ),
         filled: true,
-        fillColor: AppColors.inputBg,
+        fillColor: context.appColors.inputBg,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -626,9 +626,9 @@ class _AmountTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.inputBg,
+          color: context.appColors.inputBg,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -638,13 +638,13 @@ class _AmountTile extends StatelessWidget {
                 _formatted,
                 style: GoogleFonts.urbanist(
                   fontSize: 14,
-                  color: AppColors.labelText,
+                  color: context.appColors.labelText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const Icon(Icons.dialpad_rounded,
-                size: 18, color: AppColors.placeholderText),
+            Icon(Icons.dialpad_rounded,
+                size: 18, color: context.appColors.placeholderText),
           ],
         ),
       ),
@@ -668,9 +668,9 @@ class _DropdownField<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.inputBg,
+        color: context.appColors.inputBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButton<T>(
@@ -678,16 +678,16 @@ class _DropdownField<T> extends StatelessWidget {
         items: items,
         onChanged: onChanged,
         isExpanded: true,
-        underline: const SizedBox(),
+        underline: SizedBox(),
         isDense: true,
-        icon: const Icon(
+        icon: Icon(
           Icons.keyboard_arrow_down_rounded,
-          color: AppColors.placeholderText,
+          color: context.appColors.placeholderText,
           size: 20,
         ),
         style: GoogleFonts.urbanist(
           fontSize: 14,
-          color: AppColors.placeholderText,
+          color: context.appColors.placeholderText,
         ),
       ),
     );

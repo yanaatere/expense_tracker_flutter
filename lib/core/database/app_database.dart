@@ -13,7 +13,7 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'monex.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -66,6 +66,7 @@ class AppDatabase {
 
     await _createWalletsTable(db);
     await _createRecurringTransactionsTable(db);
+    await _createBudgetsTable(db);
   }
 
   static Future<void> _createRecurringTransactionsTable(Database db) async {
@@ -111,6 +112,18 @@ class AppDatabase {
     ''');
   }
 
+  static Future<void> _createBudgetsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE budgets (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name  TEXT NOT NULL UNIQUE,
+        monthly_limit  REAL NOT NULL,
+        created_at     INTEGER NOT NULL,
+        updated_at     INTEGER NOT NULL
+      )
+    ''');
+  }
+
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createWalletsTable(db);
@@ -122,6 +135,9 @@ class AppDatabase {
     }
     if (oldVersion < 4) {
       await _createRecurringTransactionsTable(db);
+    }
+    if (oldVersion < 5) {
+      await _createBudgetsTable(db);
     }
   }
 }

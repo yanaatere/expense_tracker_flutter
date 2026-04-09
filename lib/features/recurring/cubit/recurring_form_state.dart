@@ -1,3 +1,5 @@
+import '../../../core/models/recurring_transaction.dart';
+
 class RecurringFormState {
   final String transactionType;
   final bool loading;
@@ -9,6 +11,10 @@ class RecurringFormState {
   final bool submitting;
   final bool submitSuccess;
   final String? submitError;
+  /// Non-null when in edit mode — stores the server ID of the item being edited.
+  final String? editId;
+  /// The created or updated item set on submit success.
+  final RecurringTransaction? resultItem;
 
   const RecurringFormState({
     this.transactionType = 'income',
@@ -21,7 +27,11 @@ class RecurringFormState {
     this.submitting = false,
     this.submitSuccess = false,
     this.submitError,
+    this.editId,
+    this.resultItem,
   });
+
+  bool get isEditMode => editId != null;
 
   RecurringFormState copyWith({
     String? transactionType,
@@ -37,6 +47,8 @@ class RecurringFormState {
     bool clearSelectedCategory = false,
     bool clearSelectedSubCategory = false,
     bool clearSubmitError = false,
+    String? editId,
+    RecurringTransaction? resultItem,
   }) {
     return RecurringFormState(
       transactionType: transactionType ?? this.transactionType,
@@ -51,6 +63,8 @@ class RecurringFormState {
       submitting: submitting ?? this.submitting,
       submitSuccess: submitSuccess ?? this.submitSuccess,
       submitError: clearSubmitError ? null : (submitError ?? this.submitError),
+      editId: editId ?? this.editId,
+      resultItem: resultItem ?? this.resultItem,
     );
   }
 }

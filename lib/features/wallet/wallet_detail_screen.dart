@@ -9,6 +9,7 @@ import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
 import '../../shared/widgets/wallet_card.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 String _typeLabel(String type) {
   switch (type) {
@@ -83,8 +84,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
     final wallet = _wallet;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -104,7 +104,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -134,7 +134,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                         style: GoogleFonts.urbanist(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.labelText,
+                          color: context.appColors.labelText,
                         ),
                       ),
                     ),
@@ -294,7 +294,7 @@ class _InfoField extends StatelessWidget {
           style: GoogleFonts.urbanist(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: AppColors.labelText,
+            color: context.appColors.labelText,
           ),
         ),
         const SizedBox(height: 6),
@@ -302,14 +302,14 @@ class _InfoField extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.inputBg,
+            color: context.appColors.inputBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             value,
             style: GoogleFonts.urbanist(
               fontSize: 14,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
         ),
@@ -340,7 +340,7 @@ class _DeleteWalletDialog extends StatelessWidget {
                 'Delete Wallet',
                 style: GoogleFonts.urbanist(
                   fontSize: 12,
-                  color: AppColors.placeholderText,
+                  color: context.appColors.placeholderText,
                 ),
               ),
             ),
@@ -351,7 +351,7 @@ class _DeleteWalletDialog extends StatelessWidget {
               style: GoogleFonts.urbanist(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
               textAlign: TextAlign.center,
             ),
@@ -361,7 +361,7 @@ class _DeleteWalletDialog extends StatelessWidget {
               'By deleting this wallet you will no longer be able to see any transactions on this wallet.',
               style: GoogleFonts.urbanist(
                 fontSize: 14,
-                color: AppColors.placeholderText,
+                color: context.appColors.placeholderText,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,

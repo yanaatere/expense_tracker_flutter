@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_colors_theme.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/models/transaction.dart';
 import 'cubit/home_cubit.dart';
@@ -78,7 +79,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
       builder: (context, state) {
         final cubit = context.read<HomeCubit>();
         return Scaffold(
-          backgroundColor: AppColors.pageBg,
+          backgroundColor: context.appColors.pageBg,
           extendBody: true,
           bottomNavigationBar: _GlassBottomNav(onAddTransaction: cubit.refresh),
           body: RefreshIndicator(
@@ -195,16 +196,16 @@ class _Header extends StatelessWidget {
                       style: GoogleFonts.urbanist(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       dateStr,
                       style: GoogleFonts.urbanist(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
                   ],
@@ -212,9 +213,9 @@ class _Header extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () => context.push('/account'),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 22,
-                  backgroundColor: AppColors.cardBg,
+                  backgroundColor: context.appColors.cardBg,
                   child: Icon(Icons.person, color: AppColors.primary, size: 24),
                 ),
               ),
@@ -248,7 +249,7 @@ class _TotalExpenseCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -261,7 +262,7 @@ class _TotalExpenseCard extends StatelessWidget {
         ],
       ),
       child: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               height: 72,
               child: Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
             )
@@ -273,10 +274,10 @@ class _TotalExpenseCard extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -285,7 +286,7 @@ class _TotalExpenseCard extends StatelessWidget {
                       style: GoogleFonts.urbanist(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -306,13 +307,13 @@ class _TotalExpenseCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   '${currency.format(prevExpense)} of Last Month',
                   style: GoogleFonts.urbanist(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
               ],
@@ -338,13 +339,13 @@ class _BalanceIncomeCard extends StatelessWidget {
     final totalIncome = (summary?['total_income'] as num?)?.toDouble() ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: context.appColors.cardBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               height: 56,
               child: Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
             )
@@ -355,7 +356,7 @@ class _BalanceIncomeCard extends StatelessWidget {
                     icon: Icons.account_balance_wallet,
                     label: 'Total Balance',
                     amount: currency.format(totalBalance),
-                    amountColor: AppColors.labelText,
+                    amountColor: context.appColors.labelText,
                   )),
                   VerticalDivider(
                     color: AppColors.primary.withAlpha(51),
@@ -396,14 +397,14 @@ class _StatColumn extends StatelessWidget {
         Row(
           children: [
             Icon(icon, size: 16, color: AppColors.primary),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Flexible(
               child: Text(
                 label,
                 style: GoogleFonts.urbanist(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.placeholderText,
+                  color: context.appColors.placeholderText,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -470,22 +471,22 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(40),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: AppColors.inputBorder),
+          border: Border.all(color: context.appColors.inputBorder),
         ),
         child: Column(
           children: [
             Icon(icon, size: 22, color: AppColors.primary),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               label,
               style: GoogleFonts.urbanist(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
           ],
@@ -520,9 +521,9 @@ class _RecentTransactionSection extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.cardBg,
+                color: context.appColors.cardBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -531,14 +532,14 @@ class _RecentTransactionSection extends StatelessWidget {
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Recent Transaction',
                 style: GoogleFonts.urbanist(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.labelText,
+                  color: context.appColors.labelText,
                 ),
               ),
             ),
@@ -549,14 +550,14 @@ class _RecentTransactionSection extends StatelessWidget {
                 style: GoogleFonts.urbanist(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.placeholderText,
+                  color: context.appColors.placeholderText,
                 ),
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
 
         // ── Flat list inside one white card ────────────────────────────
         Container(
@@ -565,7 +566,7 @@ class _RecentTransactionSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: isLoading
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: CircularProgressIndicator(
@@ -576,26 +577,26 @@ class _RecentTransactionSection extends StatelessWidget {
                 )
               : error != null
                   ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                       child: Center(
                         child: Text(
                           error!,
                           style: GoogleFonts.urbanist(
                             fontSize: 13,
-                            color: AppColors.placeholderText,
+                            color: context.appColors.placeholderText,
                           ),
                         ),
                       ),
                     )
                   : transactions.isEmpty
                       ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           child: Center(
                             child: Text(
                               'No transactions yet',
                               style: GoogleFonts.urbanist(
                                 fontSize: 13,
-                                color: AppColors.placeholderText,
+                                color: context.appColors.placeholderText,
                               ),
                             ),
                           ),
@@ -610,7 +611,7 @@ class _RecentTransactionSection extends StatelessWidget {
                                   thickness: 0.5,
                                   indent: 64,
                                   endIndent: 16,
-                                  color: AppColors.inputBorder.withAlpha(180),
+                                  color: context.appColors.inputBorder.withAlpha(180),
                                 ),
                             ],
                           ],
@@ -646,7 +647,7 @@ class _TransactionRow extends StatelessWidget {
         if (deleted == true) onDeleted?.call();
       },
       child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           // Icon
@@ -654,19 +655,23 @@ class _TransactionRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: context.appColors.cardBg,
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(8),
             child: iconPath != null
-                ? Image.asset(iconPath)
+                ? Image.asset(
+                    iconPath,
+                    color: categoryColor(transaction.category, type: transaction.type),
+                    colorBlendMode: BlendMode.srcIn,
+                  )
                 : Icon(
                     isIncome ? Icons.trending_up_rounded : Icons.trending_down_rounded,
                     size: 18,
                     color: amountColor,
                   ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           // Title + date
           Expanded(
             child: Column(
@@ -677,15 +682,15 @@ class _TransactionRow extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   dateStr,
                   style: GoogleFonts.urbanist(
                     fontSize: 12,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
               ],
@@ -813,7 +818,7 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = active
         ? AppColors.primary
-        : AppColors.placeholderText.withAlpha(160);
+        : context.appColors.placeholderText.withAlpha(160);
 
     return GestureDetector(
       onTap: onTap,

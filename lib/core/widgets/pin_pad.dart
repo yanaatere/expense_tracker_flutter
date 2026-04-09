@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
+import '../theme/app_colors_theme.dart';
 
 // ── 4-dot indicator ─────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ class _Key extends StatelessWidget {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
@@ -124,7 +125,7 @@ class _BackspaceKey extends StatelessWidget {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,

@@ -6,6 +6,7 @@ import '../../core/models/wallet.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../service_locator.dart';
 import '../../shared/widgets/wallet_card.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 
 // ── Screen ───────────────────────────────────────────────────────────────────
@@ -72,8 +73,7 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ────────────────────────────────────────────────
@@ -83,7 +83,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.go('/home'),
                   ),
                   Expanded(
@@ -93,7 +93,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -122,7 +122,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     style: GoogleFonts.urbanist(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.placeholderText,
+                      color: context.appColors.placeholderText,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -133,7 +133,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     style: GoogleFonts.urbanist(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                 ],
@@ -192,7 +192,7 @@ class _SectionHeader extends StatelessWidget {
         style: GoogleFonts.urbanist(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: AppColors.labelText,
+          color: context.appColors.labelText,
         ),
       ),
     );
@@ -309,7 +309,7 @@ class _AddWalletRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
+            color: context.appColors.cardBg,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -346,14 +346,14 @@ class _EmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset('assets/icons/wallets/money.png', width: 64, height: 64,
-              color: AppColors.inputBorder),
+              color: context.appColors.inputBorder),
           const SizedBox(height: 16),
           Text(
             'No wallets yet',
             style: GoogleFonts.urbanist(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.labelText,
+              color: context.appColors.labelText,
             ),
           ),
           const SizedBox(height: 6),
@@ -361,7 +361,7 @@ class _EmptyState extends StatelessWidget {
             'Add your first wallet to get started',
             style: GoogleFonts.urbanist(
               fontSize: 13,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
           const SizedBox(height: 24),

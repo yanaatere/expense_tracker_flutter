@@ -10,6 +10,7 @@ import '../../core/utils/currency_formatter.dart';
 import '../../core/services/wallet_service.dart';
 import '../../service_locator.dart';
 import '../../shared/widgets/wallet_card.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -86,18 +87,17 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
     final wallet = _wallet;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    icon: Icon(Icons.chevron_left_rounded, size: 28),
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -107,7 +107,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -118,14 +118,14 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Wallet card ──────────────────────────────────────────
                     WalletCardWidget(wallet: _wallet),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // ── Filter tabs ──────────────────────────────────────────
                     Row(
@@ -156,15 +156,15 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // ── Section header ───────────────────────────────────────
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.cardBg,
+                            color: context.appColors.cardBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
@@ -173,39 +173,39 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                             color: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           '${wallet.name} Recent Transaction',
                           style: GoogleFonts.urbanist(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.labelText,
+                            color: context.appColors.labelText,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 14),
+                    SizedBox(height: 14),
 
                     // ── Search ───────────────────────────────────────────────
                     TextField(
                       controller: _searchController,
                       onChanged: (v) => setState(() => _searchQuery = v),
                       style: GoogleFonts.urbanist(
-                          fontSize: 14, color: AppColors.labelText),
+                          fontSize: 14, color: context.appColors.labelText),
                       decoration: InputDecoration(
                         hintText: 'Search Transaction',
                         hintStyle: GoogleFonts.urbanist(
                           fontSize: 14,
-                          color: AppColors.placeholderText,
+                          color: context.appColors.placeholderText,
                         ),
-                        prefixIcon: const Icon(
+                        prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: AppColors.placeholderText,
+                          color: context.appColors.placeholderText,
                           size: 20,
                         ),
                         filled: true,
-                        fillColor: AppColors.inputBg,
+                        fillColor: context.appColors.inputBg,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(
@@ -224,11 +224,11 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // ── Transaction list ─────────────────────────────────────
                     if (_loading)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 40),
                         child: Center(
                           child: CircularProgressIndicator(
@@ -239,26 +239,26 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                       )
                     else if (_error != null)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(
                           child: Text(
                             _error!,
                             style: GoogleFonts.urbanist(
                               fontSize: 13,
-                              color: AppColors.placeholderText,
+                              color: context.appColors.placeholderText,
                             ),
                           ),
                         ),
                       )
                     else if (_filtered.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(
                           child: Text(
                             'No transactions found',
                             style: GoogleFonts.urbanist(
                               fontSize: 13,
-                              color: AppColors.placeholderText,
+                              color: context.appColors.placeholderText,
                             ),
                           ),
                         ),
@@ -286,7 +286,7 @@ class _WalletTransactionScreenState extends State<WalletTransactionScreen> {
                                   thickness: 0.5,
                                   indent: 64,
                                   endIndent: 16,
-                                  color: AppColors.inputBorder.withAlpha(180),
+                                  color: context.appColors.inputBorder.withAlpha(180),
                                 ),
                             ],
                           ],
@@ -324,10 +324,10 @@ class _FilterTab extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          duration: Duration(milliseconds: 150),
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
+            color: context.appColors.cardBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -400,7 +400,7 @@ class _TxRow extends StatelessWidget {
         : 'assets/icons/wallets/wallet_transaction/bottom.webp';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           // Icon
@@ -408,18 +408,22 @@ class _TxRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: context.appColors.cardBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             child: iconPath != null
-                ? Image.asset(iconPath)
+                ? Image.asset(
+                    iconPath,
+                    color: categoryColor(categoryName, type: type),
+                    colorBlendMode: BlendMode.srcIn,
+                  )
                 : Image.asset(
                     fallbackAsset,
-                    color: isIncome ? AppColors.income : AppColors.placeholderText,
+                    color: isIncome ? AppColors.income : context.appColors.placeholderText,
                   ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,15 +433,15 @@ class _TxRow extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   dateLabel,
                   style: GoogleFonts.urbanist(
                     fontSize: 12,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
               ],

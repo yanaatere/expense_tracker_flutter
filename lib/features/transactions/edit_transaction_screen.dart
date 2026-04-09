@@ -13,6 +13,7 @@ import '../../core/constants/category_definitions.dart';
 import '../../core/services/api_client.dart';
 import 'cubit/transaction_form_cubit.dart';
 import 'cubit/transaction_form_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class EditTransactionScreen extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -235,7 +236,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
+          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 36),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -248,14 +249,14 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                 ),
                 child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Text(
                 'Transaction updated\nsuccessfully',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.urbanist(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.labelText,
+                  color: context.appColors.labelText,
                   height: 1.5,
                 ),
               ),
@@ -301,18 +302,17 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
         final receiptUrl = formState.receiptUrl;
 
         return Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
+body: SafeArea(
             child: Column(
               children: [
                 // ── App bar ─────────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                        color: AppColors.labelText,
+                        icon: Icon(Icons.chevron_left_rounded, size: 28),
+                        color: context.appColors.labelText,
                         onPressed: () => context.pop(),
                       ),
                       Expanded(
@@ -322,7 +322,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                           style: GoogleFonts.urbanist(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.labelText,
+                            color: context.appColors.labelText,
                           ),
                         ),
                       ),
@@ -333,7 +333,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
 
                 // ── Amount banner ────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: GestureDetector(
                     onTap: _editAmount,
                     child: Row(
@@ -348,7 +348,14 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                           ),
                           padding: const EdgeInsets.all(14),
                           child: categoryIconP != null
-                              ? Image.asset(categoryIconP)
+                              ? Image.asset(
+                                  categoryIconP,
+                                  color: categoryColor(
+                                    formState.selectedCategory!['name'] as String,
+                                    type: _type,
+                                  ),
+                                  colorBlendMode: BlendMode.srcIn,
+                                )
                               : Icon(
                                   isIncome
                                       ? Icons.trending_up_rounded
@@ -357,7 +364,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                                   size: 28,
                                 ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +373,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                                 typeLabel,
                                 style: GoogleFonts.urbanist(
                                   fontSize: 12,
-                                  color: AppColors.placeholderText,
+                                  color: context.appColors.placeholderText,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -393,24 +400,29 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                   ),
                 ),
 
-                const Divider(height: 1, thickness: 0.5),
+                Divider(height: 1, thickness: 0.5),
 
                 // ── Form ─────────────────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 20, 20, 24),
                     child: Column(
                       children: [
                         _FormRow(
                           label: 'Title',
                           child: _TextInput(controller: _titleController, hint: 'Title'),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'Category',
                           child: _DropdownField(
                             iconPath: formState.selectedCategory != null
                                 ? categoryIconPath(
+                                    formState.selectedCategory!['name'] as String,
+                                    type: _type)
+                                : null,
+                            iconColor: formState.selectedCategory != null
+                                ? categoryColor(
                                     formState.selectedCategory!['name'] as String,
                                     type: _type)
                                 : null,
@@ -420,12 +432,17 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                             onTap: () => _pickCategory(formState),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'For',
                           child: _DropdownField(
                             iconPath: formState.selectedSubCategory != null
                                 ? subCategoryIconPath(
+                                    formState.selectedSubCategory!['name'] as String,
+                                    type: _type)
+                                : null,
+                            iconColor: formState.selectedSubCategory != null
+                                ? subCategoryColor(
                                     formState.selectedSubCategory!['name'] as String,
                                     type: _type)
                                 : null,
@@ -436,7 +453,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                             onTap: () => _pickSubCategory(formState),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'Wallet',
                           child: _DropdownField(
@@ -446,7 +463,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                             onTap: () => _pickWallet(formState),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'Date',
                           child: _DropdownField(
@@ -455,7 +472,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                             onTap: _pickDate,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'Time',
                           child: _DropdownField(
@@ -464,12 +481,12 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                             onTap: _pickTime,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FormRow(
                           label: 'Note',
                           child: _TextInput(controller: _noteController, hint: 'Note'),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
 
                         // ── Attachment ────────────────────────────────────────
                         Row(
@@ -477,7 +494,7 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                           children: [
                             if (receiptUrl != null || _receiptFile != null)
                               Padding(
-                                padding: const EdgeInsets.only(right: 10),
+                                padding: EdgeInsets.only(right: 10),
                                 child: Stack(
                                   children: [
                                     GestureDetector(
@@ -499,10 +516,10 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                                                 errorBuilder: (ctx, err, stack) => Container(
                                                   width: 80,
                                                   height: 80,
-                                                  color: AppColors.cardBg,
-                                                  child: const Icon(
+                                                  color: context.appColors.cardBg,
+                                                  child: Icon(
                                                     Icons.broken_image_outlined,
-                                                    color: AppColors.placeholderText,
+                                                    color: context.appColors.placeholderText,
                                                   ),
                                                 ),
                                               ),
@@ -586,12 +603,12 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
                                           color: AppColors.primary, size: 28),
                                 ),
                               ),
-                            const Spacer(),
+                            Spacer(),
                             Text(
                               'Attachment',
                               style: GoogleFonts.urbanist(
                                 fontSize: 12,
-                                color: AppColors.placeholderText,
+                                color: context.appColors.placeholderText,
                               ),
                             ),
                           ],
@@ -684,7 +701,7 @@ class _FormRow extends StatelessWidget {
             label,
             style: GoogleFonts.urbanist(
               fontSize: 13,
-              color: AppColors.placeholderText,
+              color: context.appColors.placeholderText,
             ),
           ),
         ),
@@ -708,15 +725,15 @@ class _TextInput extends StatelessWidget {
       height: 44,
       child: TextField(
         controller: controller,
-        style: GoogleFonts.urbanist(fontSize: 14, color: AppColors.labelText),
+        style: GoogleFonts.urbanist(fontSize: 14, color: context.appColors.labelText),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.urbanist(
             fontSize: 14,
-            color: AppColors.placeholderText,
+            color: context.appColors.placeholderText,
           ),
           filled: true,
-          fillColor: AppColors.cardBg,
+          fillColor: context.appColors.cardBg,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(40),
@@ -740,6 +757,7 @@ class _TextInput extends StatelessWidget {
 
 class _DropdownField extends StatelessWidget {
   final String? iconPath;
+  final Color? iconColor;
   final String label;
   final bool hasValue;
   final bool enabled;
@@ -747,6 +765,7 @@ class _DropdownField extends StatelessWidget {
 
   const _DropdownField({
     this.iconPath,
+    this.iconColor,
     required this.label,
     required this.hasValue,
     this.enabled = true,
@@ -759,15 +778,21 @@ class _DropdownField extends StatelessWidget {
       onTap: enabled ? onTap : null,
       child: Container(
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
           children: [
             if (iconPath != null) ...[
-              Image.asset(iconPath!, width: 20, height: 20),
+              Image.asset(
+                iconPath!,
+                width: 20,
+                height: 20,
+                color: iconColor,
+                colorBlendMode: iconColor != null ? BlendMode.srcIn : null,
+              ),
               const SizedBox(width: 8),
             ],
             Expanded(
@@ -776,7 +801,7 @@ class _DropdownField extends StatelessWidget {
                 style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: hasValue ? FontWeight.w500 : FontWeight.w400,
-                  color: hasValue ? AppColors.labelText : AppColors.placeholderText,
+                  color: hasValue ? context.appColors.labelText : context.appColors.placeholderText,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -784,7 +809,7 @@ class _DropdownField extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 18,
-              color: enabled ? AppColors.placeholderText : AppColors.inputBorder,
+              color: enabled ? context.appColors.placeholderText : context.appColors.inputBorder,
             ),
           ],
         ),
@@ -802,7 +827,7 @@ class _AmountSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -817,21 +842,21 @@ class _AmountSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.inputBorder,
+                color: context.appColors.inputBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Text(
             'Edit Amount',
             style: GoogleFonts.urbanist(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.labelText,
+              color: context.appColors.labelText,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           TextField(
             controller: controller,
             autofocus: true,
@@ -840,16 +865,16 @@ class _AmountSheet extends StatelessWidget {
             style: GoogleFonts.urbanist(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.labelText,
+              color: context.appColors.labelText,
             ),
             decoration: InputDecoration(
               prefixText: 'Rp. ',
               prefixStyle: GoogleFonts.urbanist(
                 fontSize: 16,
-                color: AppColors.placeholderText,
+                color: context.appColors.placeholderText,
               ),
               filled: true,
-              fillColor: AppColors.cardBg,
+              fillColor: context.appColors.cardBg,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               border: OutlineInputBorder(
@@ -915,11 +940,11 @@ class _PickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+      padding: EdgeInsets.fromLTRB(0, 16, 0, 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -927,23 +952,23 @@ class _PickerSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.inputBorder,
+              color: context.appColors.inputBorder,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               title,
               style: GoogleFonts.urbanist(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.5,
@@ -961,9 +986,17 @@ class _PickerSheet extends StatelessWidget {
                     : categoryIconPath(name, type: type);
                 return ListTile(
                   leading: iconPath != null
-                      ? Image.asset(iconPath, width: 28, height: 28)
+                      ? Image.asset(
+                          iconPath,
+                          width: 28,
+                          height: 28,
+                          color: isSub
+                              ? subCategoryColor(name, type: type)
+                              : categoryColor(name, type: type),
+                          colorBlendMode: BlendMode.srcIn,
+                        )
                       : Icon(Icons.category_rounded,
-                          size: 24, color: AppColors.placeholderText),
+                          size: 24, color: context.appColors.placeholderText),
                   title: Text(
                     name,
                     style: GoogleFonts.urbanist(
@@ -972,7 +1005,7 @@ class _PickerSheet extends StatelessWidget {
                           isSelected ? FontWeight.w600 : FontWeight.w400,
                       color: isSelected
                           ? AppColors.primary
-                          : AppColors.labelText,
+                          : context.appColors.labelText,
                     ),
                   ),
                   trailing: isSelected
@@ -1001,11 +1034,11 @@ class _WalletSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
+      padding: EdgeInsets.fromLTRB(0, 16, 0, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1013,27 +1046,27 @@ class _WalletSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.inputBorder,
+              color: context.appColors.inputBorder,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Select Wallet',
               style: GoogleFonts.urbanist(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           ...wallets.map((w) {
             final isSelected = w['id'] == selectedId;
             return ListTile(
-              leading: const Icon(Icons.account_balance_wallet_outlined,
+              leading: Icon(Icons.account_balance_wallet_outlined,
                   color: AppColors.primary, size: 24),
               title: Text(
                 w['name'] as String,
@@ -1041,7 +1074,7 @@ class _WalletSheet extends StatelessWidget {
                   fontSize: 14,
                   fontWeight:
                       isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? AppColors.primary : AppColors.labelText,
+                  color: isSelected ? AppColors.primary : context.appColors.labelText,
                 ),
               ),
               trailing: isSelected

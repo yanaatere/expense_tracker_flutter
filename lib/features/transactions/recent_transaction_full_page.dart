@@ -10,6 +10,7 @@ import '../../core/models/transaction.dart';
 import '../../core/utils/currency_formatter.dart';
 import 'cubit/transaction_filter_cubit.dart';
 import 'cubit/transaction_filter_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -109,20 +110,20 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
                 : 'Type';
 
         return Scaffold(
-          backgroundColor: AppColors.pageBg,
+          backgroundColor: context.appColors.pageBg,
           appBar: AppBar(
-            backgroundColor: AppColors.pageBg,
+            backgroundColor: context.appColors.pageBg,
             elevation: 0,
             leading: GestureDetector(
               onTap: () => context.pop(),
-              child: const Icon(Icons.arrow_back, color: AppColors.labelText),
+              child: Icon(Icons.arrow_back, color: context.appColors.labelText),
             ),
             title: Text(
               'Recent Transaction',
               style: GoogleFonts.urbanist(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
             centerTitle: true,
@@ -131,29 +132,29 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
             children: [
               // ── Search bar ────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Container(
                   height: 46,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(40),
-                    border: Border.all(color: AppColors.inputBorder),
+                    border: Border.all(color: context.appColors.inputBorder),
                   ),
                   child: TextField(
                     controller: _searchController,
                     style: GoogleFonts.urbanist(
                       fontSize: 14,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search',
                       hintStyle: GoogleFonts.urbanist(
                         fontSize: 14,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                         size: 20,
                       ),
                       border: InputBorder.none,
@@ -193,7 +194,7 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
               // ── Transaction list ──────────────────────────────────────────
               Expanded(
                 child: state.loading
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(
                           color: AppColors.primary,
                           strokeWidth: 2,
@@ -205,7 +206,7 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
                               'Failed to load transactions',
                               style: GoogleFonts.urbanist(
                                 fontSize: 14,
-                                color: AppColors.placeholderText,
+                                color: context.appColors.placeholderText,
                               ),
                             ),
                           )
@@ -215,7 +216,7 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
                                   'No transactions found',
                                   style: GoogleFonts.urbanist(
                                     fontSize: 14,
-                                    color: AppColors.placeholderText,
+                                    color: context.appColors.placeholderText,
                                   ),
                                 ),
                               )
@@ -223,14 +224,14 @@ class _RecentTransactionViewState extends State<_RecentTransactionView> {
                                 color: AppColors.primary,
                                 onRefresh: cubit.load,
                                 child: ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                                  padding: EdgeInsets.fromLTRB(20, 8, 20, 100),
                                   itemCount: txns.length,
                                   separatorBuilder: (context, index) => Divider(
                                     height: 1,
                                     thickness: 0.5,
                                     indent: 60,
                                     endIndent: 0,
-                                    color: AppColors.inputBorder.withAlpha(180),
+                                    color: context.appColors.inputBorder.withAlpha(180),
                                   ),
                                   itemBuilder: (_, i) => _TransactionRow(
                                     transaction: txns[i],
@@ -294,10 +295,10 @@ class _FilterPill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        duration: Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AppColors.primary : AppColors.cardBg,
+          color: active ? AppColors.primary : context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
@@ -308,14 +309,14 @@ class _FilterPill extends StatelessWidget {
               style: GoogleFonts.urbanist(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.labelText,
+                color: active ? Colors.white : context.appColors.labelText,
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: active ? Colors.white : AppColors.placeholderText,
+              color: active ? Colors.white : context.appColors.placeholderText,
             ),
           ],
         ),
@@ -338,7 +339,7 @@ class _TypePickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -346,9 +347,9 @@ class _TypePickerSheet extends StatelessWidget {
             Container(
               width: 36,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: AppColors.inputBorder,
+                color: context.appColors.inputBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -357,11 +358,11 @@ class _TypePickerSheet extends StatelessWidget {
               style: GoogleFonts.urbanist(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
-            const SizedBox(height: 8),
-            Divider(color: AppColors.inputBorder.withAlpha(180), height: 1),
+            SizedBox(height: 8),
+            Divider(color: context.appColors.inputBorder.withAlpha(180), height: 1),
             _TypeOption(
               label: 'Income',
               isSelected: selected == 'income',
@@ -370,7 +371,7 @@ class _TypePickerSheet extends StatelessWidget {
                 Navigator.of(context).pop();
               },
             ),
-            Divider(color: AppColors.inputBorder.withAlpha(180), height: 1),
+            Divider(color: context.appColors.inputBorder.withAlpha(180), height: 1),
             _TypeOption(
               label: 'Expense',
               isSelected: selected == 'expense',
@@ -444,16 +445,16 @@ class _DatePickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 36,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: AppColors.inputBorder,
+                color: context.appColors.inputBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -462,20 +463,20 @@ class _DatePickerSheet extends StatelessWidget {
               style: GoogleFonts.urbanist(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             ..._options.expand((opt) => [
                   Divider(
-                      color: AppColors.inputBorder.withAlpha(180), height: 1),
+                      color: context.appColors.inputBorder.withAlpha(180), height: 1),
                   InkWell(
                     onTap: () {
                       onSelect(opt);
                       Navigator.of(context).pop();
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           vertical: 16, horizontal: 20),
                       child: Row(
                         children: [
@@ -489,7 +490,7 @@ class _DatePickerSheet extends StatelessWidget {
                                     : FontWeight.w400,
                                 color: selected == opt
                                     ? AppColors.primary
-                                    : AppColors.labelText,
+                                    : context.appColors.labelText,
                               ),
                             ),
                           ),
@@ -535,15 +536,15 @@ class _CategoryPickerSheet extends StatelessWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
             child: Column(
               children: [
                 Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.inputBorder,
+                    color: context.appColors.inputBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -552,13 +553,13 @@ class _CategoryPickerSheet extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                 ),
               ],
             ),
           ),
-          Divider(color: AppColors.inputBorder.withAlpha(180), height: 1),
+          Divider(color: context.appColors.inputBorder.withAlpha(180), height: 1),
           // "All" option
           InkWell(
             onTap: () {
@@ -567,7 +568,7 @@ class _CategoryPickerSheet extends StatelessWidget {
             },
             child: Padding(
               padding:
-                  const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  EdgeInsets.symmetric(vertical: 14, horizontal: 20),
               child: Row(
                 children: [
                   Expanded(
@@ -580,7 +581,7 @@ class _CategoryPickerSheet extends StatelessWidget {
                             : FontWeight.w400,
                         color: selected == null
                             ? AppColors.primary
-                            : AppColors.labelText,
+                            : context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -591,29 +592,31 @@ class _CategoryPickerSheet extends StatelessWidget {
               ),
             ),
           ),
-          Divider(color: AppColors.inputBorder.withAlpha(180), height: 1),
+          Divider(color: context.appColors.inputBorder.withAlpha(180), height: 1),
           // Category list
           Expanded(
             child: ListView.separated(
               controller: scrollCtrl,
               itemCount: categories.length,
               separatorBuilder: (context, index) => Divider(
-                color: AppColors.inputBorder.withAlpha(180),
+                color: context.appColors.inputBorder.withAlpha(180),
                 height: 1,
               ),
               itemBuilder: (_, i) {
                 final cat = categories[i];
                 final isSelected = selected == cat;
                 // Try income icon, fall back to expense icon
-                final iconPath = categoryIconPath(cat, type: 'income') ??
-                    categoryIconPath(cat, type: 'expense');
+                final catType = categoryIconPath(cat, type: 'income') != null
+                    ? 'income'
+                    : 'expense';
+                final iconPath = categoryIconPath(cat, type: catType);
                 return InkWell(
                   onTap: () {
                     onSelect(isSelected ? null : cat);
                     Navigator.of(context).pop();
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         vertical: 12, horizontal: 20),
                     child: Row(
                       children: [
@@ -621,16 +624,20 @@ class _CategoryPickerSheet extends StatelessWidget {
                           Container(
                             width: 32,
                             height: 32,
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.all(6),
+                            margin: EdgeInsets.only(right: 12),
+                            padding: EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppColors.cardBg,
+                              color: context.appColors.cardBg,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Image.asset(iconPath),
+                            child: Image.asset(
+                              iconPath,
+                              color: categoryColor(cat, type: catType),
+                              colorBlendMode: BlendMode.srcIn,
+                            ),
                           )
                         else
-                          const SizedBox(width: 44),
+                          SizedBox(width: 44),
                         Expanded(
                           child: Text(
                             cat,
@@ -641,7 +648,7 @@ class _CategoryPickerSheet extends StatelessWidget {
                                   : FontWeight.w400,
                               color: isSelected
                                   ? AppColors.primary
-                                  : AppColors.labelText,
+                                  : context.appColors.labelText,
                             ),
                           ),
                         ),
@@ -690,7 +697,7 @@ class _TransactionRow extends StatelessWidget {
         if (deleted == true) onDeleted?.call();
       },
       child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 14),
       child: Row(
         children: [
           // Icon
@@ -698,12 +705,16 @@ class _TransactionRow extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: context.appColors.cardBg,
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(9),
             child: iconPath != null
-                ? Image.asset(iconPath)
+                ? Image.asset(
+                    iconPath,
+                    color: categoryColor(transaction.category, type: transaction.type),
+                    colorBlendMode: BlendMode.srcIn,
+                  )
                 : Icon(
                     isIncome
                         ? Icons.trending_up_rounded
@@ -712,7 +723,7 @@ class _TransactionRow extends StatelessWidget {
                     color: amountColor,
                   ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           // Title + date
           Expanded(
             child: Column(
@@ -725,15 +736,15 @@ class _TransactionRow extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   dateStr,
                   style: GoogleFonts.urbanist(
                     fontSize: 12,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
               ],

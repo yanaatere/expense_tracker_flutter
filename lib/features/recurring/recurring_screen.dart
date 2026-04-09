@@ -5,9 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
+import '../../core/storage/local_storage.dart';
 import '../../core/models/recurring_transaction.dart';
 import 'cubit/recurring_cubit.dart';
 import 'cubit/recurring_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class RecurringScreen extends StatelessWidget {
   const RecurringScreen({super.key});
@@ -27,8 +29,7 @@ class _RecurringView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // App bar
@@ -38,7 +39,7 @@ class _RecurringView extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -48,7 +49,7 @@ class _RecurringView extends StatelessWidget {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -75,8 +76,18 @@ class _RecurringView extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                       itemCount: state.items.length,
                       separatorBuilder: (context, index) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) =>
-                          _RecurringItem(item: state.items[i]),
+                      itemBuilder: (context, i) => GestureDetector(
+                        onTap: () async {
+                          await context.push(
+                            '/recurring/detail',
+                            extra: state.items[i],
+                          );
+                          if (context.mounted) {
+                            context.read<RecurringCubit>().load();
+                          }
+                        },
+                        child: _RecurringItem(item: state.items[i]),
+                      ),
                     ),
                   );
                 },
@@ -95,6 +106,13 @@ class _RecurringView extends StatelessWidget {
               width: double.infinity,
               child: FloatingActionButton.extended(
                 onPressed: () async {
+                  final isPremium = await LocalStorage.isPremium();
+                  if (!context.mounted) return;
+                  final count = context.read<RecurringCubit>().state.items.length;
+                  if (!isPremium && count >= 3) {
+                    final upgraded = await context.push<bool>('/premium');
+                    if (upgraded != true || !context.mounted) return;
+                  }
                   final added = await context.push<bool>('/recurring/add');
                   if (added == true && context.mounted) {
                     context.read<RecurringCubit>().load();
@@ -128,7 +146,7 @@ class _EmptyState extends StatelessWidget {
         'No transaction Scheduled',
         style: GoogleFonts.urbanist(
           fontSize: 15,
-          color: AppColors.placeholderText,
+          color: context.appColors.placeholderText,
         ),
       ),
     );
@@ -185,7 +203,7 @@ class _RecurringItem extends StatelessWidget {
         : null;
     final color = catName != null
         ? categoryColor(catName, type: type)
-        : AppColors.placeholderText;
+        : context.appColors.placeholderText;
 
     return Dismissible(
       key: Key(item.id),
@@ -242,7 +260,7 @@ class _RecurringItem extends StatelessWidget {
                     style: GoogleFonts.urbanist(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                   if (subCatName != null || catName != null)
@@ -250,7 +268,7 @@ class _RecurringItem extends StatelessWidget {
                       subCatName ?? catName!,
                       style: GoogleFonts.urbanist(
                         fontSize: 12,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
                 ],

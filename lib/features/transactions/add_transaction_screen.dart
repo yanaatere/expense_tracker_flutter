@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
 import 'cubit/transaction_form_cubit.dart';
 import 'cubit/transaction_form_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class AddTransactionScreen extends StatelessWidget {
   const AddTransactionScreen({super.key});
@@ -191,18 +192,17 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
         final receiptUrl = formState.receiptUrl;
 
         return Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
+body: SafeArea(
             child: Column(
               children: [
                 // ── App bar ──────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                        color: AppColors.labelText,
+                        icon: Icon(Icons.chevron_left_rounded, size: 28),
+                        color: context.appColors.labelText,
                         onPressed: () => context.pop(),
                       ),
                       Expanded(
@@ -212,7 +212,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                           style: GoogleFonts.urbanist(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.labelText,
+                            color: context.appColors.labelText,
                           ),
                         ),
                       ),
@@ -223,11 +223,11 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
 
                 // ── Income / Expense toggle ──────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Container(
                     height: 42,
                     decoration: BoxDecoration(
-                      color: AppColors.cardBg,
+                      color: context.appColors.cardBg,
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: Row(
@@ -251,7 +251,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // ── Amount display ───────────────────────────────────────
                 Column(
@@ -260,33 +260,33 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                       label,
                       style: GoogleFonts.urbanist(
                         fontSize: 13,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       _formattedAmount,
                       style: GoogleFonts.urbanist(
                         fontSize: 36,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                     Text(
                       'Enter Amount',
                       style: GoogleFonts.urbanist(
                         fontSize: 12,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // ── Category + Sub-category pills ────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Expanded(
@@ -301,14 +301,14 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                   size: 18,
                                   type: formState.transactionType,
                                 )
-                              : const Icon(Icons.grid_view_rounded,
-                                  size: 16, color: AppColors.placeholderText),
+                              : Icon(Icons.grid_view_rounded,
+                                  size: 16, color: context.appColors.placeholderText),
                           hasValue: formState.selectedCategory != null,
                           enabled: formState.categories.isNotEmpty,
                           onTap: () => _showCategoryPicker(formState),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: _CategoryPill(
                           label: formState.selectedSubCategory != null
@@ -321,8 +321,8 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                   size: 18,
                                   type: formState.transactionType,
                                 )
-                              : const Icon(Icons.list_rounded,
-                                  size: 16, color: AppColors.placeholderText),
+                              : Icon(Icons.list_rounded,
+                                  size: 16, color: context.appColors.placeholderText),
                           hasValue: formState.selectedSubCategory != null,
                           enabled: formState.selectedCategory != null,
                           onTap: () => _showSubCategoryPicker(formState),
@@ -332,7 +332,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                   ),
                 ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 // ── Input row 1: Title + Wallet ──────────────────────────
                 Padding(
@@ -356,11 +356,11 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                   ),
                 ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 // ── Input row 2: Note + Attach ───────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Expanded(
@@ -369,7 +369,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                           hint: 'Note',
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         onEnter: (_) {
@@ -387,10 +387,10 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                       ? _pickReceipt
                                       : null,
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
+                            duration: Duration(milliseconds: 200),
                             curve: Curves.easeInOut,
                             height: 44,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
                               color: receiptUrl != null
                                   ? (_receiptHovered
@@ -400,7 +400,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                               borderRadius: BorderRadius.circular(40),
                             ),
                             child: formState.uploadingReceipt
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(strokeWidth: 2),
@@ -409,7 +409,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       AnimatedSwitcher(
-                                        duration: const Duration(milliseconds: 200),
+                                        duration: Duration(milliseconds: 200),
                                         child: Icon(
                                           receiptUrl != null
                                               ? (_receiptHovered
@@ -426,12 +426,12 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                               ? (_receiptHovered
                                                   ? AppColors.expense
                                                   : const Color(0xFF5AC45A))
-                                              : AppColors.placeholderText,
+                                              : context.appColors.placeholderText,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: 4),
                                       AnimatedDefaultTextStyle(
-                                        duration: const Duration(milliseconds: 200),
+                                        duration: Duration(milliseconds: 200),
                                         style: GoogleFonts.urbanist(
                                           fontSize: 13,
                                           fontWeight: _receiptHovered && receiptUrl != null
@@ -441,7 +441,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
                                               ? (_receiptHovered
                                                   ? AppColors.expense
                                                   : const Color(0xFF5AC45A))
-                                              : AppColors.placeholderText,
+                                              : context.appColors.placeholderText,
                                         ),
                                         child: Text(
                                           receiptUrl != null
@@ -564,7 +564,7 @@ class _SuccessDialogState extends State<_SuccessDialog> {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
+        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 36),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -577,14 +577,14 @@ class _SuccessDialogState extends State<_SuccessDialog> {
               ),
               child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Text(
               '${widget.label} transactions\nhave been added',
               textAlign: TextAlign.center,
               style: GoogleFonts.urbanist(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
                 height: 1.5,
               ),
             ),
@@ -614,7 +614,7 @@ class _ToggleTab extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: const EdgeInsets.all(4),
+          margin: EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(36),
@@ -625,7 +625,7 @@ class _ToggleTab extends StatelessWidget {
             style: GoogleFonts.urbanist(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.placeholderText,
+              color: selected ? Colors.white : context.appColors.placeholderText,
             ),
           ),
         ),
@@ -654,16 +654,20 @@ class _CategoryIcon extends StatelessWidget {
     final path = isSub
         ? subCategoryIconPath(name, type: type)
         : categoryIconPath(name, type: type);
+    final iconColor = isSub
+        ? subCategoryColor(name, type: type)
+        : categoryColor(name, type: type);
     if (path == null) {
-      return Icon(Icons.category_rounded,
-          size: size, color: AppColors.placeholderText);
+      return Icon(Icons.category_rounded, size: size, color: iconColor);
     }
     return Image.asset(
       path,
       width: size,
       height: size,
-      errorBuilder: (context, error, stack) => Icon(Icons.category_rounded,
-          size: size, color: AppColors.placeholderText),
+      color: iconColor,
+      colorBlendMode: BlendMode.srcIn,
+      errorBuilder: (context, error, stack) =>
+          Icon(Icons.category_rounded, size: size, color: iconColor),
     );
   }
 }
@@ -691,15 +695,15 @@ class _CategoryPill extends StatelessWidget {
       onTap: enabled ? onTap : null,
       child: Container(
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
           children: [
             icon,
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
@@ -707,8 +711,8 @@ class _CategoryPill extends StatelessWidget {
                 style: GoogleFonts.urbanist(
                   fontSize: 13,
                   color: hasValue
-                      ? AppColors.labelText
-                      : AppColors.placeholderText,
+                      ? context.appColors.labelText
+                      : context.appColors.placeholderText,
                 ),
               ),
             ),
@@ -716,8 +720,8 @@ class _CategoryPill extends StatelessWidget {
               Icons.keyboard_arrow_down_rounded,
               size: 16,
               color: enabled
-                  ? AppColors.placeholderText
-                  : AppColors.placeholderText.withAlpha(80),
+                  ? context.appColors.placeholderText
+                  : context.appColors.placeholderText.withAlpha(80),
             ),
           ],
         ),
@@ -749,7 +753,7 @@ class _ItemPickerSheet extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -759,7 +763,7 @@ class _ItemPickerSheet extends StatelessWidget {
           children: [
             // ── Handle + title (fixed, doesn't scroll) ──────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -768,18 +772,18 @@ class _ItemPickerSheet extends StatelessWidget {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.inputBorder,
+                        color: context.appColors.inputBorder,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     title,
                     style: GoogleFonts.urbanist(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -789,7 +793,7 @@ class _ItemPickerSheet extends StatelessWidget {
             // ── Scrollable list ──────────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -805,7 +809,7 @@ class _ItemPickerSheet extends StatelessWidget {
             return GestureDetector(
               onTap: () => Navigator.pop(context, item),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 4),
+                margin: EdgeInsets.only(bottom: 4),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? color.withAlpha(20)
@@ -826,7 +830,7 @@ class _ItemPickerSheet extends StatelessWidget {
                         ),
                       )
                     else
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                     Container(
                       width: 40,
                       height: 40,
@@ -838,7 +842,7 @@ class _ItemPickerSheet extends StatelessWidget {
                       child: _CategoryIcon(
                           name: name, isSub: isSub, size: 24, type: type),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         name,
@@ -846,7 +850,7 @@ class _ItemPickerSheet extends StatelessWidget {
                           fontSize: 14,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? color : AppColors.labelText,
+                          color: isSelected ? color : context.appColors.labelText,
                         ),
                       ),
                     ),
@@ -884,17 +888,17 @@ class _InputField extends StatelessWidget {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: context.appColors.cardBg,
         borderRadius: BorderRadius.circular(40),
       ),
       child: TextField(
         controller: controller,
-        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+        style: GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.urbanist(
             fontSize: 13,
-            color: AppColors.placeholderText,
+            color: context.appColors.placeholderText,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -937,9 +941,9 @@ class _WalletPicker extends StatelessWidget {
               ),
       child: Container(
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
@@ -949,12 +953,12 @@ class _WalletPicker extends StatelessWidget {
               selected?['name'] as String? ?? 'Wallet',
               style: GoogleFonts.urbanist(
                 fontSize: 13,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down_rounded,
-                size: 16, color: AppColors.placeholderText),
+                size: 16, color: context.appColors.placeholderText),
           ],
         ),
       ),
@@ -1000,21 +1004,21 @@ class _WalletDialog extends StatelessWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Center(
               child: Text(
                 'Select Wallet',
                 style: GoogleFonts.urbanist(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.labelText,
+                  color: context.appColors.labelText,
                 ),
               ),
             ),
@@ -1023,13 +1027,13 @@ class _WalletDialog extends StatelessWidget {
           // Groups
           for (final entry in grouped.entries) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
               child: Text(
                 _formatType(entry.key),
                 style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.labelText,
+                  color: context.appColors.labelText,
                 ),
               ),
             ),
@@ -1068,8 +1072,8 @@ class _WalletRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.08)
@@ -1084,7 +1088,7 @@ class _WalletRow extends StatelessWidget {
                 style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.labelText,
+                  color: isSelected ? AppColors.primary : context.appColors.labelText,
                 ),
               ),
             ),
@@ -1095,7 +1099,7 @@ class _WalletRow extends StatelessWidget {
                   'Balance',
                   style: GoogleFonts.urbanist(
                     fontSize: 11,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
                 Text(
@@ -1103,7 +1107,7 @@ class _WalletRow extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? AppColors.primary : AppColors.labelText,
+                    color: isSelected ? AppColors.primary : context.appColors.labelText,
                   ),
                 ),
               ],
@@ -1201,7 +1205,7 @@ class _NumKey extends StatelessWidget {
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,

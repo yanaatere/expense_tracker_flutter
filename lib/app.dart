@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'core/constants/app_colors.dart';
+import 'core/theme/app_colors_theme.dart';
+import 'core/models/recurring_transaction.dart';
 import 'core/services/api_client.dart';
 import 'core/models/wallet.dart';
 import 'core/storage/local_storage.dart';
@@ -26,10 +27,14 @@ import 'features/auth/pin_login_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/account/account_info_screen.dart';
 import 'features/account/activate_pin_screen.dart';
+import 'features/account/categories_screen.dart';
+import 'features/budget/budget_screen.dart';
+import 'features/premium/premium_screen.dart';
 import 'features/account/edit_profile_screen.dart';
 import 'features/account/pin_setup_screen.dart';
 import 'features/recurring/recurring_screen.dart';
 import 'features/recurring/add_recurring_screen.dart';
+import 'features/recurring/recurring_detail_screen.dart';
 import 'features/welcome/welcome_screen.dart';
 
 class MonexApp extends StatefulWidget {
@@ -94,25 +99,29 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
     return ValueListenableBuilder<Locale>(
       valueListenable: ServiceLocator.localeNotifier,
       builder: (context, locale, _) {
-        return MaterialApp.router(
-          title: 'Monex Finance',
-          debugShowCheckedModeBanner: false,
-          locale: locale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('en'),
-            Locale('id'),
-          ],
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-            useMaterial3: true,
-          ),
-          routerConfig: _router,
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: ServiceLocator.themeNotifier,
+          builder: (context, themeMode, _) {
+            return MaterialApp.router(
+              title: 'Monex Finance',
+              debugShowCheckedModeBanner: false,
+              locale: locale,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en'),
+                Locale('id'),
+              ],
+              theme: AppColorsTheme.lightThemeData,
+              darkTheme: AppColorsTheme.darkThemeData,
+              themeMode: themeMode,
+              routerConfig: _router,
+            );
+          },
         );
       },
     );
@@ -242,6 +251,18 @@ final _router = GoRouter(
       builder: (context, state) => const ActivatePinScreen(),
     ),
     GoRoute(
+      path: '/account/categories',
+      builder: (context, state) => const CategoriesScreen(),
+    ),
+    GoRoute(
+      path: '/premium',
+      builder: (context, state) => const PremiumScreen(),
+    ),
+    GoRoute(
+      path: '/budget',
+      builder: (context, state) => const BudgetScreen(),
+    ),
+    GoRoute(
       path: '/pin-setup',
       builder: (context, state) => const PinSetupScreen(),
     ),
@@ -256,6 +277,22 @@ final _router = GoRouter(
     GoRoute(
       path: '/recurring/add',
       builder: (context, state) => const AddRecurringScreen(),
+    ),
+    GoRoute(
+      path: '/recurring/detail',
+      builder: (context, state) {
+        final item = state.extra as RecurringTransaction?;
+        if (item == null) return const RecurringScreen();
+        return RecurringDetailScreen(item: item);
+      },
+    ),
+    GoRoute(
+      path: '/recurring/edit',
+      builder: (context, state) {
+        final item = state.extra as RecurringTransaction?;
+        if (item == null) return const RecurringScreen();
+        return AddRecurringScreen(initialData: item);
+      },
     ),
     GoRoute(
       path: '/add-transaction',

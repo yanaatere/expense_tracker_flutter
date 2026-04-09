@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/storage/local_storage.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class ActivatePinScreen extends StatefulWidget {
   const ActivatePinScreen({super.key});
@@ -41,8 +42,7 @@ class _ActivatePinScreenState extends State<ActivatePinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ class _ActivatePinScreenState extends State<ActivatePinScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -62,7 +62,7 @@ class _ActivatePinScreenState extends State<ActivatePinScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -79,7 +79,7 @@ class _ActivatePinScreenState extends State<ActivatePinScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBg,
+                  color: context.appColors.cardBg,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -104,7 +104,7 @@ class _ActivatePinScreenState extends State<ActivatePinScreen> {
                         style: GoogleFonts.urbanist(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.labelText,
+                          color: context.appColors.labelText,
                         ),
                       ),
                     ),

@@ -11,6 +11,7 @@ import '../../core/utils/currency_formatter.dart';
 import '../../core/models/wallet.dart';
 import 'cubit/wallet_transaction_filter_cubit.dart';
 import 'cubit/wallet_transaction_filter_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class WalletExpenseScreen extends StatelessWidget {
   final Wallet wallet;
@@ -69,20 +70,19 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
             state.monthly ? 'Monthly Expense Overview' : 'Annual Expense Overview';
 
         return Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
+body: SafeArea(
             child: Column(
               children: [
                 // ── App bar ────────────────────────────────────────────────
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
                         icon:
-                            const Icon(Icons.chevron_left_rounded, size: 28),
-                        color: AppColors.labelText,
+                            Icon(Icons.chevron_left_rounded, size: 28),
+                        color: context.appColors.labelText,
                         onPressed: () => context.pop(),
                       ),
                       Expanded(
@@ -92,7 +92,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                           style: GoogleFonts.urbanist(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.labelText,
+                            color: context.appColors.labelText,
                           ),
                         ),
                       ),
@@ -103,7 +103,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
 
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -111,7 +111,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                         Container(
                           height: 44,
                           decoration: BoxDecoration(
-                            color: AppColors.cardBg,
+                            color: context.appColors.cardBg,
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: Row(
@@ -130,7 +130,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                           ),
                         ),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
 
                         // ── Period label ───────────────────────────────────
                         Center(
@@ -138,18 +138,18 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                             _periodLabel(state.monthly),
                             style: GoogleFonts.urbanist(
                               fontSize: 13,
-                              color: AppColors.placeholderText,
+                              color: context.appColors.placeholderText,
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
 
                         // ── Overview card ──────────────────────────────────
                         Container(
                           width: double.infinity,
                           padding:
-                              const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                              EdgeInsets.fromLTRB(24, 24, 24, 20),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF0F0),
                             borderRadius: BorderRadius.circular(20),
@@ -164,12 +164,12 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                                 overviewLabel,
                                 style: GoogleFonts.urbanist(
                                   fontSize: 13,
-                                  color: AppColors.placeholderText,
+                                  color: context.appColors.placeholderText,
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               if (state.loading)
-                                const CircularProgressIndicator(
+                                CircularProgressIndicator(
                                     color: AppColors.expense, strokeWidth: 2)
                               else if (state.showStats &&
                                   catTotals.isNotEmpty) ...[
@@ -199,18 +199,18 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                                   style: GoogleFonts.urbanist(
                                     fontSize: 30,
                                     fontWeight: FontWeight.w800,
-                                    color: AppColors.labelText,
+                                    color: context.appColors.labelText,
                                   ),
                                 ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               GestureDetector(
                                 onTap: () => cubit.toggleStats(),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 10),
                                   decoration: BoxDecoration(
                                     color: state.showStats
-                                        ? AppColors.labelText
+                                        ? context.appColors.labelText
                                         : AppColors.expense,
                                     borderRadius: BorderRadius.circular(40),
                                   ),
@@ -243,49 +243,49 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
 
                         // ── Section header ─────────────────────────────────
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
+                              padding: EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppColors.cardBg,
+                                color: context.appColors.cardBg,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.access_time_rounded,
                                   size: 16, color: AppColors.expense),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               '${widget.wallet.name} Recent Expense',
                               style: GoogleFonts.urbanist(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.labelText,
+                                color: context.appColors.labelText,
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
 
                         // ── Search ─────────────────────────────────────────
                         TextField(
                           controller: _searchController,
                           onChanged: (v) => cubit.setSearch(v),
                           style: GoogleFonts.urbanist(
-                              fontSize: 14, color: AppColors.labelText),
+                              fontSize: 14, color: context.appColors.labelText),
                           decoration: InputDecoration(
                             hintText: 'Search Transaction',
                             hintStyle: GoogleFonts.urbanist(
                                 fontSize: 14,
-                                color: AppColors.placeholderText),
-                            prefixIcon: const Icon(Icons.search_rounded,
-                                color: AppColors.placeholderText, size: 20),
+                                color: context.appColors.placeholderText),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                color: context.appColors.placeholderText, size: 20),
                             filled: true,
-                            fillColor: AppColors.inputBg,
+                            fillColor: context.appColors.inputBg,
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),
                             border: OutlineInputBorder(
@@ -302,7 +302,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
 
                         // ── Period + Category dropdowns ────────────────────
                         Row(
@@ -327,29 +327,29 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                           ],
                         ),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
 
                         // ── Transaction list ───────────────────────────────
                         if (state.error != null)
                           Center(
                             child: Padding(
                               padding:
-                                  const EdgeInsets.symmetric(vertical: 32),
+                                  EdgeInsets.symmetric(vertical: 32),
                               child: Text(state.error!,
                                   style: GoogleFonts.urbanist(
                                       fontSize: 13,
-                                      color: AppColors.placeholderText)),
+                                      color: context.appColors.placeholderText)),
                             ),
                           )
                         else if (!state.loading && filtered.isEmpty)
                           Center(
                             child: Padding(
                               padding:
-                                  const EdgeInsets.symmetric(vertical: 32),
+                                  EdgeInsets.symmetric(vertical: 32),
                               child: Text('No expense transactions found',
                                   style: GoogleFonts.urbanist(
                                       fontSize: 13,
-                                      color: AppColors.placeholderText)),
+                                      color: context.appColors.placeholderText)),
                             ),
                           )
                         else
@@ -379,7 +379,7 @@ class _WalletExpenseViewState extends State<_WalletExpenseView> {
                                       thickness: 0.5,
                                       indent: 64,
                                       endIndent: 16,
-                                      color: AppColors.inputBorder
+                                      color: context.appColors.inputBorder
                                           .withAlpha(180),
                                     ),
                                 ],
@@ -440,13 +440,13 @@ class _DonutChart extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.expense.withAlpha(20),
                     borderRadius: BorderRadius.circular(40),
@@ -457,7 +457,7 @@ class _DonutChart extends StatelessWidget {
                         'Avg Daily',
                         style: GoogleFonts.urbanist(
                           fontSize: 9,
-                          color: AppColors.placeholderText,
+                          color: context.appColors.placeholderText,
                         ),
                       ),
                       Text(
@@ -520,7 +520,7 @@ class _CategoryLegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = total > 0 ? (amount / total * 100).toStringAsFixed(1) : '0.0';
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Container(
@@ -531,26 +531,26 @@ class _CategoryLegendRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(3),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               category,
-              style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+              style: GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
             '$pct%',
             style: GoogleFonts.urbanist(
-                fontSize: 12, color: AppColors.placeholderText),
+                fontSize: 12, color: context.appColors.placeholderText),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             formatCurrency(amount, currency),
             style: GoogleFonts.urbanist(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.labelText),
+                color: context.appColors.labelText),
           ),
         ],
       ),
@@ -574,8 +574,8 @@ class _ToggleTab extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.all(4),
+          duration: Duration(milliseconds: 150),
+          margin: EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: selected ? AppColors.expense : Colors.transparent,
             borderRadius: BorderRadius.circular(36),
@@ -586,7 +586,7 @@ class _ToggleTab extends StatelessWidget {
             style: GoogleFonts.urbanist(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? Colors.white : AppColors.placeholderText,
+              color: selected ? Colors.white : context.appColors.placeholderText,
             ),
           ),
         ),
@@ -608,9 +608,9 @@ class _DropdownFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: context.appColors.cardBg,
         borderRadius: BorderRadius.circular(40),
       ),
       child: DropdownButton<String>(
@@ -620,16 +620,16 @@ class _DropdownFilter extends StatelessWidget {
                   value: e,
                   child: Text(e,
                       style: GoogleFonts.urbanist(
-                          fontSize: 13, color: AppColors.labelText)),
+                          fontSize: 13, color: context.appColors.labelText)),
                 ))
             .toList(),
         onChanged: onChanged,
         isExpanded: true,
-        underline: const SizedBox(),
+        underline: SizedBox(),
         isDense: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-            color: AppColors.placeholderText, size: 18),
-        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+        icon: Icon(Icons.keyboard_arrow_down_rounded,
+            color: context.appColors.placeholderText, size: 18),
+        style: GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
       ),
     );
   }
@@ -653,9 +653,9 @@ class _CategoryDropdownFilter extends StatelessWidget {
     final value = selectedCategory ?? 'Category';
     final allItems = ['Category', ...categories];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: context.appColors.cardBg,
         borderRadius: BorderRadius.circular(40),
       ),
       child: DropdownButton<String>(
@@ -672,13 +672,17 @@ class _CategoryDropdownFilter extends StatelessWidget {
                   SizedBox(
                     width: 18,
                     height: 18,
-                    child: Image.asset(iconPath),
+                    child: Image.asset(
+                      iconPath,
+                      color: categoryColor(e, type: 'expense'),
+                      colorBlendMode: BlendMode.srcIn,
+                    ),
                   ),
                   const SizedBox(width: 8),
                 ],
                 Text(e,
                     style: GoogleFonts.urbanist(
-                        fontSize: 13, color: AppColors.labelText)),
+                        fontSize: 13, color: context.appColors.labelText)),
               ],
             ),
           );
@@ -693,7 +697,11 @@ class _CategoryDropdownFilter extends StatelessWidget {
                 SizedBox(
                   width: 16,
                   height: 16,
-                  child: Image.asset(iconPath),
+                  child: Image.asset(
+                    iconPath,
+                    color: categoryColor(e, type: 'expense'),
+                    colorBlendMode: BlendMode.srcIn,
+                  ),
                 ),
                 const SizedBox(width: 6),
               ],
@@ -701,7 +709,7 @@ class _CategoryDropdownFilter extends StatelessWidget {
                 child: Text(
                   e,
                   style: GoogleFonts.urbanist(
-                      fontSize: 13, color: AppColors.labelText),
+                      fontSize: 13, color: context.appColors.labelText),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -710,11 +718,11 @@ class _CategoryDropdownFilter extends StatelessWidget {
         }).toList(),
         onChanged: onChanged,
         isExpanded: true,
-        underline: const SizedBox(),
+        underline: SizedBox(),
         isDense: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-            color: AppColors.placeholderText, size: 18),
-        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+        icon: Icon(Icons.keyboard_arrow_down_rounded,
+            color: context.appColors.placeholderText, size: 18),
+        style: GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
       ),
     );
   }
@@ -774,25 +782,29 @@ class _ExpenseTxRow extends StatelessWidget {
         if (deleted == true) onDeleted?.call();
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.cardBg,
+                color: context.appColors.cardBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(10),
               child: iconPath != null
-                  ? Image.asset(iconPath)
+                  ? Image.asset(
+                      iconPath,
+                      color: categoryColor(categoryName, type: 'expense'),
+                      colorBlendMode: BlendMode.srcIn,
+                    )
                   : Image.asset(
                       'assets/icons/wallets/wallet_transaction/bottom.webp',
                       color: AppColors.expense,
                     ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,11 +813,11 @@ class _ExpenseTxRow extends StatelessWidget {
                       style: GoogleFonts.urbanist(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.labelText)),
-                  const SizedBox(height: 2),
+                          color: context.appColors.labelText)),
+                  SizedBox(height: 2),
                   Text(dateLabel,
                       style: GoogleFonts.urbanist(
-                          fontSize: 12, color: AppColors.placeholderText)),
+                          fontSize: 12, color: context.appColors.placeholderText)),
                 ],
               ),
             ),

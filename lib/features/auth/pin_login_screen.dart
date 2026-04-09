@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/storage/local_storage.dart';
 import '../../core/widgets/pin_pad.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class PinLoginScreen extends StatefulWidget {
   const PinLoginScreen({super.key});
@@ -78,8 +79,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> with SingleTickerProvid
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -177,7 +177,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> with SingleTickerProvid
                       'Use password instead',
                       style: GoogleFonts.urbanist(
                         fontSize: 13,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
                   ),

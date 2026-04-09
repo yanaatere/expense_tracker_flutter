@@ -40,8 +40,7 @@ class _SelectLanguageScreenState extends State<SelectLanguageScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(

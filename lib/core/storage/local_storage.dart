@@ -142,6 +142,34 @@ class LocalStorage {
     return prefs.getBool(_pinEnabledKey) ?? false;
   }
 
+  // ── Theme mode (shared prefs) ───────────────────────────────────────────────
+
+  static const _themeModeKey = 'theme_mode';
+
+  static Future<void> setThemeMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, mode);
+  }
+
+  static Future<String> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_themeModeKey) ?? 'system';
+  }
+
+  // ── Premium (shared prefs) ──────────────────────────────────────────────────
+
+  static const _isPremiumKey = 'is_premium';
+
+  static Future<void> setPremium(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_isPremiumKey, value);
+  }
+
+  static Future<bool> isPremium() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_isPremiumKey) ?? false;
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
 
   static Future<void> clearAll() async {

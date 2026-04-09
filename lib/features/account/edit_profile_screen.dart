@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/storage/local_storage.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -69,8 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -90,7 +90,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -184,7 +184,7 @@ class _FieldLabel extends StatelessWidget {
       style: GoogleFonts.urbanist(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: AppColors.labelText,
+        color: context.appColors.labelText,
       ),
     );
   }
@@ -211,13 +211,13 @@ class _InputField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
-      style: GoogleFonts.urbanist(fontSize: 14, color: AppColors.labelText),
+      style: GoogleFonts.urbanist(fontSize: 14, color: context.appColors.labelText),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle:
-            GoogleFonts.urbanist(fontSize: 14, color: AppColors.placeholderText),
+            GoogleFonts.urbanist(fontSize: 14, color: context.appColors.placeholderText),
         filled: true,
-        fillColor: AppColors.inputBg,
+        fillColor: context.appColors.inputBg,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(

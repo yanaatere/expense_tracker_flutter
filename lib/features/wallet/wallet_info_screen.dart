@@ -8,6 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/models/wallet.dart';
 import '../../core/services/wallet_service.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -118,7 +119,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.urbanist(color: AppColors.placeholderText)),
+            child: Text('Cancel', style: GoogleFonts.urbanist(color: context.appColors.placeholderText)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -156,8 +157,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
     final usdText = '/ USD ${NumberFormat('#,##0.##').format(usdAmount)}';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -177,7 +177,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -299,7 +299,7 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                     style: GoogleFonts.urbanist(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                 ],
@@ -316,14 +316,14 @@ class _WalletInfoScreenState extends State<WalletInfoScreen> {
                       ? Center(
                           child: Text(
                             'Wallet not synced yet.',
-                            style: GoogleFonts.urbanist(color: AppColors.placeholderText),
+                            style: GoogleFonts.urbanist(color: context.appColors.placeholderText),
                           ),
                         )
                       : _transactions.isEmpty
                           ? Center(
                               child: Text(
                                 'No transactions found.',
-                                style: GoogleFonts.urbanist(color: AppColors.placeholderText),
+                                style: GoogleFonts.urbanist(color: context.appColors.placeholderText),
                               ),
                             )
                           : ListView.builder(
@@ -421,7 +421,7 @@ class _FilterTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? activeColor.withValues(alpha: 0.12) : AppColors.cardBg,
+          color: selected ? activeColor.withValues(alpha: 0.12) : context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
           border: selected
               ? Border.all(color: activeColor.withValues(alpha: 0.4), width: 1)
@@ -430,14 +430,14 @@ class _FilterTab extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: selected ? activeColor : AppColors.placeholderText),
+            Icon(icon, size: 14, color: selected ? activeColor : context.appColors.placeholderText),
             const SizedBox(width: 4),
             Text(
               label,
               style: GoogleFonts.urbanist(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? activeColor : AppColors.placeholderText,
+                color: selected ? activeColor : context.appColors.placeholderText,
               ),
             ),
           ],
@@ -486,7 +486,7 @@ class _TransactionItem extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: context.appColors.cardBg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -506,7 +506,7 @@ class _TransactionItem extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.labelText,
+                    color: context.appColors.labelText,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -516,7 +516,7 @@ class _TransactionItem extends StatelessWidget {
                   subtitle.isNotEmpty ? subtitle : formattedDate,
                   style: GoogleFonts.urbanist(
                     fontSize: 12,
-                    color: AppColors.placeholderText,
+                    color: context.appColors.placeholderText,
                   ),
                 ),
               ],

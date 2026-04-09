@@ -5,17 +5,30 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/category_definitions.dart';
+import '../../core/models/recurring_transaction.dart';
 import 'cubit/recurring_form_cubit.dart';
 import 'cubit/recurring_form_state.dart';
+import '../../../core/theme/app_colors_theme.dart';
 
 class AddRecurringScreen extends StatelessWidget {
-  const AddRecurringScreen({super.key});
+  /// When non-null the screen runs in edit mode, pre-filling all fields.
+  final RecurringTransaction? initialData;
+
+  const AddRecurringScreen({super.key, this.initialData});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => RecurringFormCubit()..loadData(type: 'income'),
-      child: const _AddRecurringView(),
+      create: (_) {
+        final cubit = RecurringFormCubit();
+        if (initialData != null) {
+          cubit.loadForEdit(initialData!);
+        } else {
+          cubit.loadData(type: 'income');
+        }
+        return cubit;
+      },
+      child: _AddRecurringView(initialData: initialData),
     );
   }
 }
@@ -23,7 +36,8 @@ class AddRecurringScreen extends StatelessWidget {
 // ─── View ────────────────────────────────────────────────────────────────────
 
 class _AddRecurringView extends StatefulWidget {
-  const _AddRecurringView();
+  final RecurringTransaction? initialData;
+  const _AddRecurringView({this.initialData});
 
   @override
   State<_AddRecurringView> createState() => _AddRecurringViewState();
@@ -37,6 +51,8 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
   DateTime _startDate = DateTime.now();
   int _spanValue = 1;
   String _spanUnit = 'years';
+
+  bool get _isEditMode => widget.initialData != null;
 
   double get _amount => double.tryParse(_amountStr) ?? 0;
 
@@ -83,6 +99,60 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
         return value == 1 ? 'Month' : 'Months';
       default:
         return value == 1 ? 'Year' : 'Years';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialData != null) {
+      _initFromData(widget.initialData!);
+    }
+  }
+
+  void _initFromData(RecurringTransaction rt) {
+    _amountStr = rt.amount.toStringAsFixed(0);
+    _titleController.text = rt.title;
+    _frequency = rt.frequency;
+
+    if (rt.startDate.isNotEmpty) {
+      try {
+        _startDate = DateTime.parse(rt.startDate);
+      } catch (_) {}
+    }
+
+    // Reconstruct span from endDate
+    if (rt.endDate != null && rt.endDate!.isNotEmpty) {
+      try {
+        final start = DateTime.parse(rt.startDate);
+        final end = DateTime.parse(rt.endDate!);
+
+        final diffYears = end.year - start.year;
+        if (diffYears > 0 && end.month == start.month && end.day == start.day) {
+          _spanUnit = 'years';
+          _spanValue = diffYears.clamp(1, 10);
+          return;
+        }
+
+        final diffMonths = (end.year - start.year) * 12 + (end.month - start.month);
+        if (diffMonths > 0 && end.day == start.day) {
+          _spanUnit = 'months';
+          _spanValue = diffMonths.clamp(1, 10);
+          return;
+        }
+
+        final diffDays = end.difference(start).inDays;
+        if (diffDays > 0 && diffDays % 7 == 0) {
+          _spanUnit = 'weeks';
+          _spanValue = (diffDays ~/ 7).clamp(1, 10);
+          return;
+        }
+
+        if (diffDays > 0) {
+          _spanUnit = 'days';
+          _spanValue = diffDays.clamp(1, 10);
+        }
+      } catch (_) {}
     }
   }
 
@@ -176,18 +246,37 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
     }
 
     final router = GoRouter.of(context);
-    await context.read<RecurringFormCubit>().submit(
-      amount: _amount,
-      title: _titleController.text.trim(),
-      frequency: _frequency,
-      startDate: _dateToStr(_startDate),
-      endDate: _dateToStr(_endDate),
-    );
+    final cubit = context.read<RecurringFormCubit>();
+
+    if (_isEditMode) {
+      await cubit.update(
+        original: widget.initialData!,
+        amount: _amount,
+        title: _titleController.text.trim(),
+        frequency: _frequency,
+        startDate: _dateToStr(_startDate),
+        endDate: _dateToStr(_endDate),
+      );
+    } else {
+      await cubit.submit(
+        amount: _amount,
+        title: _titleController.text.trim(),
+        frequency: _frequency,
+        startDate: _dateToStr(_startDate),
+        endDate: _dateToStr(_endDate),
+      );
+    }
 
     if (!mounted) return;
-    final state = context.read<RecurringFormCubit>().state;
-    if (state.submitSuccess) {
-      router.pop(true);
+    final resultState = cubit.state;
+    if (resultState.submitSuccess) {
+      if (_isEditMode) {
+        // Pop back to detail screen with the updated item.
+        router.pop(resultState.resultItem);
+      } else {
+        // Pop back to recurring list so it refreshes.
+        router.pop(true);
+      }
     }
   }
 
@@ -211,28 +300,27 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
         final isIncome = formState.transactionType == 'income';
 
         return Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
+body: SafeArea(
             child: Column(
               children: [
                 // ── App bar ─────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                        color: AppColors.labelText,
+                        icon: Icon(Icons.chevron_left_rounded, size: 28),
+                        color: context.appColors.labelText,
                         onPressed: () => context.pop(),
                       ),
                       Expanded(
                         child: Text(
-                          'Add Schedule',
+                          _isEditMode ? 'Edit Schedule' : 'Add Schedule',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.urbanist(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.labelText,
+                            color: context.appColors.labelText,
                           ),
                         ),
                       ),
@@ -243,11 +331,11 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
 
                 // ── Toggle ───────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Container(
                     height: 42,
                     decoration: BoxDecoration(
-                      color: AppColors.cardBg,
+                      color: context.appColors.cardBg,
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: Row(
@@ -269,7 +357,7 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── Amount display ────────────────────────────────────────
                 Column(
@@ -278,40 +366,40 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                       isIncome ? 'Add Income Schedule' : 'Add Expense Schedule',
                       style: GoogleFonts.urbanist(
                         fontSize: 13,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       _formattedAmount,
                       style: GoogleFonts.urbanist(
                         fontSize: 36,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                     Text(
                       'Enter Amount',
                       style: GoogleFonts.urbanist(
                         fontSize: 12,
-                        color: AppColors.placeholderText,
+                        color: context.appColors.placeholderText,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── Scrollable form fields ────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.only(bottom: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Category + Sub-category pills
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             children: [
                               Expanded(
@@ -326,14 +414,14 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                                           size: 18,
                                           type: formState.transactionType,
                                         )
-                                      : const Icon(Icons.grid_view_rounded,
-                                          size: 16, color: AppColors.placeholderText),
+                                      : Icon(Icons.grid_view_rounded,
+                                          size: 16, color: context.appColors.placeholderText),
                                   hasValue: formState.selectedCategory != null,
                                   enabled: formState.categories.isNotEmpty,
                                   onTap: () => _showCategoryPicker(formState),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(
                                 child: _CategoryPill(
                                   label: formState.selectedSubCategory != null
@@ -346,8 +434,8 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                                           size: 18,
                                           type: formState.transactionType,
                                         )
-                                      : const Icon(Icons.list_rounded,
-                                          size: 16, color: AppColors.placeholderText),
+                                      : Icon(Icons.list_rounded,
+                                          size: 16, color: context.appColors.placeholderText),
                                   hasValue: formState.selectedSubCategory != null,
                                   enabled: formState.selectedCategory != null,
                                   onTap: () => _showSubCategoryPicker(formState),
@@ -357,18 +445,18 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                           ),
                         ),
 
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
 
                         // Title
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Tittle',
                                 style: GoogleFonts.urbanist(
-                                    fontSize: 13, color: AppColors.bodyText),
+                                    fontSize: 13, color: context.appColors.bodyText),
                               ),
                               const SizedBox(height: 4),
                               _InputField(
@@ -379,11 +467,11 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                           ),
                         ),
 
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
 
                         // Frequency + Start date
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             children: [
                               Expanded(
@@ -392,7 +480,7 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                                   children: [
                                     Text('Frequency',
                                         style: GoogleFonts.urbanist(
-                                            fontSize: 13, color: AppColors.bodyText)),
+                                            fontSize: 13, color: context.appColors.bodyText)),
                                     const SizedBox(height: 4),
                                     _DropdownField<String>(
                                       value: _frequency,
@@ -412,33 +500,33 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Start date',
                                         style: GoogleFonts.urbanist(
-                                            fontSize: 13, color: AppColors.bodyText)),
-                                    const SizedBox(height: 4),
+                                            fontSize: 13, color: context.appColors.bodyText)),
+                                    SizedBox(height: 4),
                                     GestureDetector(
                                       onTap: _pickStartDate,
                                       child: Container(
                                         height: 44,
                                         alignment: Alignment.centerLeft,
-                                        padding: const EdgeInsets.symmetric(
+                                        padding: EdgeInsets.symmetric(
                                             horizontal: 14),
                                         decoration: BoxDecoration(
-                                          color: AppColors.inputBg,
+                                          color: context.appColors.inputBg,
                                           borderRadius: BorderRadius.circular(40),
                                           border: Border.all(
-                                              color: AppColors.inputBorder),
+                                              color: context.appColors.inputBorder),
                                         ),
                                         child: Text(
                                           _startDateLabel,
                                           style: GoogleFonts.urbanist(
                                             fontSize: 13,
-                                            color: AppColors.labelText,
+                                            color: context.appColors.labelText,
                                           ),
                                         ),
                                       ),
@@ -450,17 +538,17 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                           ),
                         ),
 
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
 
                         // Span Time
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Span Time',
                                   style: GoogleFonts.urbanist(
-                                      fontSize: 13, color: AppColors.bodyText)),
+                                      fontSize: 13, color: context.appColors.bodyText)),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
@@ -503,17 +591,17 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                           ),
                         ),
 
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
 
                         // Choose Wallet
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Choose Wallet',
                                   style: GoogleFonts.urbanist(
-                                      fontSize: 13, color: AppColors.bodyText)),
+                                      fontSize: 13, color: context.appColors.bodyText)),
                               const SizedBox(height: 4),
                               _DropdownField<Map<String, dynamic>>(
                                 value: formState.selectedWallet,
@@ -582,7 +670,7 @@ class _AddRecurringViewState extends State<_AddRecurringView> {
                                   color: Colors.white, strokeWidth: 2.5),
                             )
                           : Text(
-                              'Save',
+                              _isEditMode ? 'Update' : 'Save',
                               style: GoogleFonts.urbanist(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -619,8 +707,8 @@ class _ToggleTab extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.all(3),
+          duration: Duration(milliseconds: 200),
+          margin: EdgeInsets.all(3),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : Colors.transparent,
@@ -631,7 +719,7 @@ class _ToggleTab extends StatelessWidget {
             style: GoogleFonts.urbanist(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.placeholderText,
+              color: selected ? Colors.white : context.appColors.placeholderText,
             ),
           ),
         ),
@@ -661,11 +749,11 @@ class _CategoryPill extends StatelessWidget {
       onTap: enabled ? onTap : null,
       child: Container(
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: hasValue
               ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardBg,
+              : context.appColors.cardBg,
           borderRadius: BorderRadius.circular(40),
           border: Border.all(
             color: hasValue
@@ -676,7 +764,7 @@ class _CategoryPill extends StatelessWidget {
         child: Row(
           children: [
             icon,
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Expanded(
               child: Text(
                 label,
@@ -685,14 +773,14 @@ class _CategoryPill extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
                   color:
-                      hasValue ? AppColors.labelText : AppColors.placeholderText,
+                      hasValue ? context.appColors.labelText : context.appColors.placeholderText,
                 ),
               ),
             ),
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: hasValue ? AppColors.primary : AppColors.placeholderText,
+              color: hasValue ? AppColors.primary : context.appColors.placeholderText,
             ),
           ],
         ),
@@ -754,13 +842,13 @@ class _InputField extends StatelessWidget {
       height: 44,
       child: TextField(
         controller: controller,
-        style: GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+        style: GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.urbanist(
-              fontSize: 13, color: AppColors.placeholderText),
+              fontSize: 13, color: context.appColors.placeholderText),
           filled: true,
-          fillColor: AppColors.inputBg,
+          fillColor: context.appColors.inputBg,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           border: OutlineInputBorder(
@@ -796,20 +884,20 @@ class _DropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.inputBg,
+        color: context.appColors.inputBg,
         borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: AppColors.inputBorder),
+        border: Border.all(color: context.appColors.inputBorder),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: AppColors.placeholderText),
+          icon: Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: context.appColors.placeholderText),
           style:
-              GoogleFonts.urbanist(fontSize: 13, color: AppColors.labelText),
+              GoogleFonts.urbanist(fontSize: 13, color: context.appColors.labelText),
           items: items,
           onChanged: onChanged,
         ),
@@ -880,7 +968,7 @@ class _NumKey extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.appColors.cardBg,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -888,7 +976,7 @@ class _NumKey extends StatelessWidget {
           style: GoogleFonts.urbanist(
             fontSize: isBackspace ? 18 : 20,
             fontWeight: FontWeight.w600,
-            color: AppColors.labelText,
+            color: context.appColors.labelText,
           ),
         ),
       ),
@@ -919,35 +1007,35 @@ class _ItemPickerSheet extends StatelessWidget {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.65,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Container(
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.inputBorder,
+              color: context.appColors.inputBorder,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Text(
               title,
               style: GoogleFonts.urbanist(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.labelText,
+                color: context.appColors.labelText,
               ),
             ),
           ),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
               itemCount: items.length,
               itemBuilder: (context, i) {
                 final item = items[i];
@@ -984,7 +1072,7 @@ class _ItemPickerSheet extends StatelessWidget {
                       fontSize: 14,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                   trailing: isSelected

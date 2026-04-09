@@ -179,8 +179,7 @@ class _SetupWalletScreenState extends State<SetupWalletScreen> {
         if (!didPop) context.go('/home');
       },
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(

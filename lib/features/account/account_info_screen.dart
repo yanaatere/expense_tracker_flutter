@@ -6,9 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/services/export_service.dart';
 import '../../core/storage/local_storage.dart';
+import '../../core/theme/app_colors_theme.dart';
+import '../../service_locator.dart';
 
 // ---------------------------------------------------------------------------
 // Account Info Screen
@@ -24,6 +28,8 @@ class AccountInfoScreen extends StatefulWidget {
 class _AccountInfoScreenState extends State<AccountInfoScreen> {
   String _username = 'User';
   String? _avatarPath;
+  bool _isPremium = false;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -34,11 +40,33 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   Future<void> _loadUser() async {
     final username = await LocalStorage.getUsername();
     final avatarPath = await LocalStorage.getAvatarPath();
+    final isPremium = await LocalStorage.isPremium();
     if (mounted) {
       setState(() {
         _username = username ?? 'User';
         _avatarPath = avatarPath;
+        _isPremium = isPremium;
       });
+    }
+  }
+
+  Future<void> _exportData() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _exporting = true);
+    try {
+      final path = await ExportService.exportTransactionsCsv();
+      await Share.shareXFiles(
+        [XFile(path)],
+        text: 'Monex transaction export',
+      );
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -63,19 +91,19 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   void _showAvatarOptions() {
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.inputBorder,
+                color: context.appColors.inputBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -116,18 +144,17 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+body: SafeArea(
         child: Column(
           children: [
             // ── App bar ────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                    color: AppColors.labelText,
+                    icon: Icon(Icons.chevron_left_rounded, size: 28),
+                    color: context.appColors.labelText,
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -137,7 +164,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                       style: GoogleFonts.urbanist(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.labelText,
+                        color: context.appColors.labelText,
                       ),
                     ),
                   ),
@@ -149,7 +176,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
             // ── Content ────────────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -165,7 +192,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
-                                  color: AppColors.cardBg,
+                                  color: context.appColors.cardBg,
                                   shape: BoxShape.circle,
                                 ),
                                 clipBehavior: Clip.antiAlias,
@@ -206,18 +233,72 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                             ],
                           ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Text(
                             '👋 $_username',
                             style: GoogleFonts.urbanist(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.labelText,
+                              color: context.appColors.labelText,
                             ),
                           ),
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Premium banner ─────────────────────────────────────
+                    if (!_isPremium)
+                      GestureDetector(
+                        onTap: () async {
+                          final upgraded = await context.push<bool>('/premium');
+                          if (upgraded == true) _loadUser();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF635AFF), Color(0xFF9B8FFF)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.workspace_premium_rounded,
+                                  color: Colors.white, size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Go Premium',
+                                      style: GoogleFonts.urbanist(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Unlock budgets, exports & more',
+                                      style: GoogleFonts.urbanist(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded,
+                                  color: Colors.white70),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 28),
 
@@ -263,12 +344,34 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/DataExport.webp',
                           label: 'Data Export',
-                          onTap: () {},
+                          onTap: _isPremium
+                              ? (_exporting ? () {} : _exportData)
+                              : () => context.push('/premium'),
+                          trailing: _isPremium
+                              ? (_exporting
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
+                                    )
+                                  : null)
+                              : const _PremiumBadge(),
                         ),
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/Categories.webp',
                           label: 'Categories',
-                          onTap: () {},
+                          onTap: () => context.push('/account/categories'),
+                        ),
+                        _MenuItem(
+                          iconAsset: 'assets/icons/accountinfo/Categories.webp',
+                          label: 'Budget',
+                          onTap: _isPremium
+                              ? () => context.push('/budget')
+                              : () => context.push('/premium'),
+                          trailing: _isPremium ? null : const _PremiumBadge(),
                         ),
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/Currency.webp',
@@ -296,12 +399,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                           label: 'Card Theme',
                           onTap: () {},
                         ),
-                        _MenuItem(
-                          iconAsset: 'assets/icons/accountinfo/LightDarkMode.webp',
-                          label: 'Light / Dark Mode',
-                          onTap: () {},
-                          showDivider: false,
-                        ),
+                        _ThemeModeItem(),
                       ],
                     ),
 
@@ -375,7 +473,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.urbanist(color: AppColors.placeholderText)),
+            child: Text('Cancel', style: GoogleFonts.urbanist(color: context.appColors.placeholderText)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -410,7 +508,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.urbanist(color: AppColors.placeholderText)),
+            child: Text('Cancel', style: GoogleFonts.urbanist(color: context.appColors.placeholderText)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -442,7 +540,7 @@ class _SectionLabel extends StatelessWidget {
       style: GoogleFonts.urbanist(
         fontSize: 14,
         fontWeight: FontWeight.w700,
-        color: AppColors.labelText,
+        color: context.appColors.labelText,
       ),
     );
   }
@@ -453,7 +551,7 @@ class _SectionLabel extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MenuGroup extends StatelessWidget {
-  final List<_MenuItem> items;
+  final List<Widget> items;
 
   const _MenuGroup({required this.items});
 
@@ -461,7 +559,7 @@ class _MenuGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: context.appColors.cardBg,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(children: items),
@@ -479,6 +577,7 @@ class _MenuItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool showDivider;
+  final Widget? trailing;
 
   const _MenuItem({
     this.iconAsset,
@@ -486,6 +585,7 @@ class _MenuItem extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.showDivider = true,
+    this.trailing,
   }) : assert(iconAsset != null || icon != null);
 
   @override
@@ -497,7 +597,7 @@ class _MenuItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 // Icon
@@ -508,7 +608,7 @@ class _MenuItem extends StatelessWidget {
                       ? Image.asset(iconAsset!, fit: BoxFit.contain)
                       : Icon(icon, size: 24, color: AppColors.primary),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 // Label
                 Expanded(
                   child: Text(
@@ -516,16 +616,17 @@ class _MenuItem extends StatelessWidget {
                     style: GoogleFonts.urbanist(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.labelText,
+                      color: context.appColors.labelText,
                     ),
                   ),
                 ),
-                // Chevron
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: AppColors.placeholderText,
-                ),
+                // Trailing widget or default chevron
+                trailing ??
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: context.appColors.placeholderText,
+                    ),
               ],
             ),
           ),
@@ -536,9 +637,102 @@ class _MenuItem extends StatelessWidget {
             thickness: 0.5,
             indent: 62,
             endIndent: 16,
-            color: AppColors.inputBorder.withAlpha(180),
+            color: context.appColors.inputBorder.withAlpha(180),
           ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Theme mode toggle item
+// ---------------------------------------------------------------------------
+
+class _ThemeModeItem extends StatelessWidget {
+  const _ThemeModeItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ServiceLocator.themeNotifier,
+      builder: (context, current, _) {
+        final isDark = current == ThemeMode.dark ||
+            (current == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        return InkWell(
+          onTap: () async {
+            final next = isDark ? ThemeMode.light : ThemeMode.dark;
+            ServiceLocator.themeNotifier.value = next;
+            await LocalStorage.setThemeMode(
+                next == ThemeMode.dark ? 'dark' : 'light');
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Image.asset(
+                    'assets/icons/accountinfo/LightDarkMode.webp',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Light / Dark Mode',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: context.appColors.labelText,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: isDark,
+                  activeThumbColor: AppColors.primary,
+                  onChanged: (val) async {
+                    final next = val ? ThemeMode.dark : ThemeMode.light;
+                    ServiceLocator.themeNotifier.value = next;
+                    await LocalStorage.setThemeMode(val ? 'dark' : 'light');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Premium badge chip
+// ---------------------------------------------------------------------------
+
+class _PremiumBadge extends StatelessWidget {
+  const _PremiumBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF635AFF), Color(0xFF9B8FFF)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'PRO',
+        style: GoogleFonts.urbanist(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }
