@@ -246,13 +246,26 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
     return BlocConsumer<TransactionFormCubit, TransactionFormState>(
       listenWhen: (prev, curr) =>
           curr.submitSuccess != prev.submitSuccess ||
-          curr.submitError != prev.submitError,
+          curr.submitError != prev.submitError ||
+          curr.budgetWarning != prev.budgetWarning,
       listener: (context, state) {
         if (state.submitSuccess) {
           _showSuccessDialog(state.transactionType);
         } else if (state.submitError != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.submitError!)),
+          );
+        }
+        if (state.budgetWarning != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.budgetWarning!,
+                  style: GoogleFonts.urbanist(
+                      fontWeight: FontWeight.w600, color: Colors.white)),
+              backgroundColor: Colors.orange.shade700,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
           );
         }
       },

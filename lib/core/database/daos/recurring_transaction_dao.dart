@@ -56,12 +56,26 @@ class RecurringTransactionDao {
     await batch.commit(noResult: true);
   }
 
+  Future<void> deleteAllForUser(String userId) async {
+    await _db.delete('recurring_transactions', where: 'user_id = ?', whereArgs: [userId]);
+  }
+
   Future<void> delete(String id) async {
     await _db.delete(
       'recurring_transactions',
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<List<RecurringTransaction>> getUnsynced(String userId) async {
+    final rows = await _db.query(
+      'recurring_transactions',
+      where: 'user_id = ? AND sync_status IN (\'local\', \'pending\')',
+      whereArgs: [userId],
+      orderBy: 'created_at ASC',
+    );
+    return rows.map(RecurringTransaction.fromMap).toList();
   }
 
   Future<void> updateSyncStatus(String id, String serverId, String syncStatus) async {

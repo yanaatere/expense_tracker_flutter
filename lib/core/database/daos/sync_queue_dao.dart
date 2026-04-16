@@ -24,6 +24,15 @@ class SyncQueueDao {
     await _db.delete('sync_queue', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Delete done/failed entries older than [olderThanMs]. Returns count deleted.
+  Future<int> purgeStale(int olderThanMs) async {
+    return _db.delete(
+      'sync_queue',
+      where: "status IN ('done', 'failed') AND created_at < ?",
+      whereArgs: [olderThanMs],
+    );
+  }
+
   Future<void> incrementRetry(int id, String error) async {
     final rows =
         await _db.query('sync_queue', where: 'id = ?', whereArgs: [id]);

@@ -185,6 +185,21 @@ class LocalStorage {
     return prefs.getBool(_isPremiumKey) ?? false;
   }
 
+  // ── Storage retention (shared prefs) ───────────────────────────────────────
+
+  static const _retentionMonthsKey = 'retention_months';
+
+  /// How many months of synced data to keep locally. 0 = keep all.
+  static Future<void> setRetentionMonths(int months) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_retentionMonthsKey, months);
+  }
+
+  static Future<int> getRetentionMonths() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_retentionMonthsKey) ?? 3;
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
 
   static Future<void> clearAll() async {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'core/theme/app_colors_theme.dart';
 import 'core/models/recurring_transaction.dart';
 import 'core/services/api_client.dart';
+import 'core/services/auth_service.dart';
 import 'core/models/wallet.dart';
 import 'core/storage/local_storage.dart';
 import 'features/auth/create_account_screen.dart';
@@ -29,6 +30,9 @@ import 'features/account/account_info_screen.dart';
 import 'features/account/activate_pin_screen.dart';
 import 'features/account/categories_screen.dart';
 import 'features/budget/budget_screen.dart';
+import 'features/budget/add_budget_screen.dart';
+import 'features/budget/budget_detail_screen.dart';
+import 'core/dao/budget_dao.dart';
 import 'features/premium/premium_screen.dart';
 import 'features/account/edit_profile_screen.dart';
 import 'features/account/pin_setup_screen.dart';
@@ -38,6 +42,10 @@ import 'features/recurring/recurring_detail_screen.dart';
 import 'features/welcome/welcome_screen.dart';
 import 'features/ai/ai_chat_screen.dart';
 import 'features/ai/ai_report_screen.dart';
+import 'features/account/backup_screen.dart';
+import 'features/account/storage_maintenance_screen.dart';
+import 'features/account/export_backup_screen.dart';
+import 'features/account/restore_data_screen.dart';
 
 class MonexApp extends StatefulWidget {
   const MonexApp({super.key});
@@ -72,9 +80,17 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
       // App went to background — save timestamp
       LocalStorage.saveLastActiveAt();
     } else if (state == AppLifecycleState.resumed) {
-      // App came back to foreground — check expiration
+      // App came back to foreground — check expiration and refresh premium status
       _checkSessionExpiry();
+      _refreshPremiumStatus();
     }
+  }
+
+  Future<void> _refreshPremiumStatus() async {
+    try {
+      final isPremium = await AuthService.fetchIsPremium();
+      await LocalStorage.setPremium(isPremium);
+    } catch (_) {}
   }
 
   Future<void> _checkSessionExpiry() async {
@@ -265,6 +281,21 @@ final _router = GoRouter(
       builder: (context, state) => const BudgetScreen(),
     ),
     GoRoute(
+      path: '/budget/add',
+      builder: (context, state) =>
+          AddBudgetScreen(existing: state.extra as Budget?),
+    ),
+    GoRoute(
+      path: '/budget/detail',
+      builder: (context, state) {
+        final data = state.extra as Map<String, dynamic>;
+        return BudgetDetailScreen(
+          budget: data['budget'] as Budget,
+          spending: data['spending'] as double,
+        );
+      },
+    ),
+    GoRoute(
       path: '/pin-setup',
       builder: (context, state) => const PinSetupScreen(),
     ),
@@ -327,6 +358,22 @@ final _router = GoRouter(
     GoRoute(
       path: '/ai/report',
       builder: (context, state) => const AiReportScreen(),
+    ),
+    GoRoute(
+      path: '/backup',
+      builder: (context, state) => const BackupScreen(),
+    ),
+    GoRoute(
+      path: '/backup/export',
+      builder: (context, state) => const ExportBackupScreen(),
+    ),
+    GoRoute(
+      path: '/backup/restore',
+      builder: (context, state) => const RestoreDataScreen(),
+    ),
+    GoRoute(
+      path: '/account/storage',
+      builder: (context, state) => const StorageMaintenanceScreen(),
     ),
   ],
 );

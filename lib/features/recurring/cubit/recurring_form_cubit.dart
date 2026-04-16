@@ -1,16 +1,19 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/category_definitions.dart';
 import '../../../core/models/recurring_transaction.dart';
 import '../../../core/models/wallet.dart';
-import '../../../core/services/recurring_transaction_service.dart';
-import '../../../core/storage/local_storage.dart';
+import '../../../core/repositories/recurring_repository.dart';
 import '../../../service_locator.dart';
 import 'recurring_form_state.dart';
 
 class RecurringFormCubit extends Cubit<RecurringFormState> {
-  RecurringFormCubit() : super(const RecurringFormState());
+  final RecurringRepository _recurringRepository;
+
+  RecurringFormCubit({RecurringRepository? recurringRepository})
+      : _recurringRepository =
+            recurringRepository ?? ServiceLocator.recurringRepository,
+        super(const RecurringFormState());
 
   Future<void> loadData({String type = 'income'}) async {
     if (!isClosed) emit(state.copyWith(transactionType: type, loading: true));
@@ -34,7 +37,12 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
 
   Future<void> loadForEdit(RecurringTransaction rt) async {
     if (!isClosed) {
-      emit(state.copyWith(transactionType: rt.type, loading: true, editId: rt.serverId));
+      emit(state.copyWith(
+        transactionType: rt.type,
+        loading: true,
+        editLocalId: rt.id,
+        editServerId: rt.serverId,
+      ));
     }
 
     final wallets = await ServiceLocator.walletRepository
@@ -78,7 +86,8 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
         selectedCategory: selectedCat,
         selectedSubCategory: selectedSub,
         selectedWallet: selectedWallet,
-        editId: rt.serverId,
+        editLocalId: rt.id,
+        editServerId: rt.serverId,
       ));
     }
   }
@@ -123,9 +132,9 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
     try {
       final categoryId = state.selectedCategory?['id'] as int?;
       final subCategoryId = state.selectedSubCategory?['id'] as int?;
-      final walletId = state.selectedWallet?['id'] as int?;
+      final walletId = state.selectedWallet?['id'] as String?;
 
-      final raw = await RecurringTransactionService.create(
+      final rt = await _recurringRepository.create(
         title: title,
         type: state.transactionType,
         amount: amount,
@@ -137,18 +146,13 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
         endDate: endDate,
       );
 
-      final userId = await LocalStorage.getUsername() ?? '';
-      final rt = RecurringTransaction.fromApi(raw, userId);
-      await ServiceLocator.recurringTransactionDao.insert(rt);
-
       if (!isClosed) {
         emit(state.copyWith(submitting: false, submitSuccess: true, resultItem: rt));
       }
-    } on DioException catch (e) {
-      final msg = e.response?.data?['message']?.toString() ?? 'Failed to save schedule';
-      if (!isClosed) emit(state.copyWith(submitting: false, submitError: msg));
     } catch (e) {
-      if (!isClosed) emit(state.copyWith(submitting: false, submitError: e.toString()));
+      if (!isClosed) {
+        emit(state.copyWith(submitting: false, submitError: e.toString()));
+      }
     }
   }
 
@@ -162,21 +166,13 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
   }) async {
     if (!isClosed) emit(state.copyWith(submitting: true, clearSubmitError: true));
 
-    final serverId = state.editId;
-    if (serverId == null) {
-      if (!isClosed) {
-        emit(state.copyWith(submitting: false, submitError: 'Missing server ID'));
-      }
-      return;
-    }
-
     try {
       final categoryId = state.selectedCategory?['id'] as int?;
       final subCategoryId = state.selectedSubCategory?['id'] as int?;
-      final walletId = state.selectedWallet?['id'] as int?;
+      final walletId = state.selectedWallet?['id'] as String?;
 
-      await RecurringTransactionService.update(
-        id: int.parse(serverId),
+      final updated = await _recurringRepository.update(
+        original: original,
         title: title,
         type: state.transactionType,
         amount: amount,
@@ -188,34 +184,13 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
         endDate: endDate,
       );
 
-      // Build updated local record preserving the local UUID.
-      final updated = original.copyWith(
-        title: title,
-        type: state.transactionType,
-        amount: amount,
-        categoryId: categoryId,
-        clearCategoryId: categoryId == null,
-        subCategoryId: subCategoryId,
-        clearSubCategoryId: subCategoryId == null,
-        walletId: walletId?.toString(),
-        clearWalletId: walletId == null,
-        frequency: frequency,
-        startDate: startDate,
-        endDate: endDate,
-        clearEndDate: endDate == null || endDate.isEmpty,
-        syncStatus: 'synced',
-      );
-
-      await ServiceLocator.recurringTransactionDao.update(updated);
-
       if (!isClosed) {
         emit(state.copyWith(submitting: false, submitSuccess: true, resultItem: updated));
       }
-    } on DioException catch (e) {
-      final msg = e.response?.data?['message']?.toString() ?? 'Failed to update schedule';
-      if (!isClosed) emit(state.copyWith(submitting: false, submitError: msg));
     } catch (e) {
-      if (!isClosed) emit(state.copyWith(submitting: false, submitError: e.toString()));
+      if (!isClosed) {
+        emit(state.copyWith(submitting: false, submitError: e.toString()));
+      }
     }
   }
 
@@ -224,12 +199,11 @@ class RecurringFormCubit extends Cubit<RecurringFormState> {
   List<Map<String, dynamic>> _mapWallets(List<Wallet> wallets) {
     return wallets
         .map((w) => <String, dynamic>{
-              'id': w.serverId != null ? int.tryParse(w.serverId!) : null,
+              'id': w.serverId ?? w.id,
               'name': w.name,
               'type': w.type,
               'balance': w.balance,
             })
-        .where((m) => m['id'] != null)
         .toList();
   }
 }

@@ -4,14 +4,20 @@ import 'package:flutter/material.dart';
 import 'core/database/app_database.dart';
 import 'core/dao/budget_dao.dart';
 import 'core/database/daos/auth_cache_dao.dart';
+import 'core/database/daos/expense_dao.dart';
 import 'core/database/daos/recurring_transaction_dao.dart';
 import 'core/database/daos/sync_queue_dao.dart';
 import 'core/database/daos/wallet_dao.dart';
 import 'core/repositories/auth_repository.dart';
 import 'core/repositories/auth_repository_impl.dart';
+import 'core/repositories/recurring_repository.dart';
+import 'core/repositories/recurring_repository_impl.dart';
+import 'core/repositories/transaction_repository.dart';
+import 'core/repositories/transaction_repository_impl.dart';
 import 'core/repositories/wallet_repository.dart';
 import 'core/repositories/wallet_repository_impl.dart';
 import 'core/services/api_client.dart';
+import 'core/services/auth_service.dart';
 import 'core/storage/local_storage.dart';
 import 'core/sync/connectivity_service.dart';
 import 'core/sync/sync_service.dart';
@@ -21,6 +27,11 @@ class ServiceLocator {
   static late SyncService syncService;
   static late AuthRepository authRepository;
   static late WalletRepository walletRepository;
+  static late TransactionRepository transactionRepository;
+  static late RecurringRepository recurringRepository;
+  static late AuthCacheDao authCacheDao;
+  static late ExpenseDao expenseDao;
+  static late WalletDao walletDao;
   static late RecurringTransactionDao recurringTransactionDao;
   static late BudgetDao budgetDao;
   static late ValueNotifier<Locale> localeNotifier;
@@ -51,8 +62,9 @@ class ServiceLocator {
     connectivity = ConnectivityService();
 
     final syncQueueDao = SyncQueueDao(db);
-    final walletDao = WalletDao(db);
-    final authCacheDao = AuthCacheDao(db);
+    walletDao = WalletDao(db);
+    authCacheDao = AuthCacheDao(db);
+    expenseDao = ExpenseDao(db);
     recurringTransactionDao = RecurringTransactionDao(db);
     budgetDao = BudgetDao(db);
 
@@ -60,6 +72,8 @@ class ServiceLocator {
       syncQueueDao: syncQueueDao,
       authCacheDao: authCacheDao,
       walletDao: walletDao,
+      expenseDao: expenseDao,
+      recurringTransactionDao: recurringTransactionDao,
       dio: ApiClient.dio,
     );
 
@@ -76,8 +90,44 @@ class ServiceLocator {
       connectivity: connectivity,
     );
 
-    _connectivitySubscription = connectivity.onConnectivityChanged.listen((online) {
-      if (online) syncService.processQueue();
+    transactionRepository = TransactionRepositoryImpl(
+      expenseDao: expenseDao,
+      authCacheDao: authCacheDao,
+      syncQueueDao: syncQueueDao,
+      connectivity: connectivity,
+    );
+
+    recurringRepository = RecurringRepositoryImpl(
+      recurringDao: recurringTransactionDao,
+      authCacheDao: authCacheDao,
+      syncQueueDao: syncQueueDao,
+      connectivity: connectivity,
+    );
+
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen((online) async {
+      if (online) {
+        // Refresh premium status from BE (best-effort)
+        try {
+          final isPremium = await AuthService.fetchIsPremium();
+          await authCacheDao.updateIsPremium(isPremium);
+          await LocalStorage.setPremium(isPremium);
+        } catch (_) {}
+
+        await syncService.processQueue();
+        if (await LocalStorage.isPremium()) {
+          final entry = await authCacheDao.get();
+          if (entry != null) {
+            await syncService.pullSync(entry.userId);
+            // Auto-prune old synced data to keep SQLite lean.
+            final retention = await LocalStorage.getRetentionMonths();
+            if (retention > 0) {
+              try {
+                await syncService.maintenanceLocalData(entry.userId, retention);
+              } catch (_) {}
+            }
+          }
+        }
+      }
     });
   }
 

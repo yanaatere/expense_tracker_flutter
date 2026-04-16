@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/services/auth_service.dart';
 import '../../core/storage/local_storage.dart';
+import '../../service_locator.dart';
 import '../../shared/widgets/primary_button.dart';
 import '../../../core/theme/app_colors_theme.dart';
 
@@ -22,8 +24,26 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   Future<void> _activate() async {
     setState(() => _activating = true);
-    await LocalStorage.setPremium(true);
-    if (mounted) context.pop(true);
+    try {
+      // Activate premium on the backend first
+      final entry = await ServiceLocator.authCacheDao.get();
+      if (entry != null) {
+        await AuthService.setPremium(userId: entry.userId, isPremium: true);
+      }
+      await LocalStorage.setPremium(true);
+      await ServiceLocator.authCacheDao.updateIsPremium(true);
+      // Bulk-push all locally saved data to the API now that user is premium.
+      await ServiceLocator.syncService.bulkPushLocalData();
+      if (mounted) context.pop(true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Activation failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _activating = false);
+    }
   }
 
   @override

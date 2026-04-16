@@ -6,10 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-
 import '../../core/constants/app_colors.dart';
-import '../../core/services/export_service.dart';
 import '../../core/storage/local_storage.dart';
 import '../../core/theme/app_colors_theme.dart';
 import '../../service_locator.dart';
@@ -42,7 +39,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   String _username = 'User';
   String? _avatarPath;
   bool _isPremium = false;
-  bool _exporting = false;
 
   @override
   void initState() {
@@ -60,26 +56,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         _avatarPath = avatarPath;
         _isPremium = isPremium;
       });
-    }
-  }
-
-  Future<void> _exportData() async {
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _exporting = true);
-    try {
-      final path = await ExportService.exportTransactionsCsv();
-      await Share.shareXFiles(
-        [XFile(path)],
-        text: 'Monex transaction export',
-      );
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -352,26 +328,12 @@ body: SafeArea(
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/BackupData.webp',
                           label: 'Backup data',
-                          onTap: () {},
+                          onTap: () => context.push('/backup'),
                         ),
                         _MenuItem(
-                          iconAsset: 'assets/icons/accountinfo/DataExport.webp',
-                          label: 'Data Export',
-                          onTap: _isPremium
-                              ? (_exporting ? () {} : _exportData)
-                              : () => context.push('/premium'),
-                          trailing: _isPremium
-                              ? (_exporting
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.primary,
-                                      ),
-                                    )
-                                  : null)
-                              : const _PremiumBadge(),
+                          icon: Icons.cleaning_services_rounded,
+                          label: 'Storage Maintenance',
+                          onTap: () => context.push('/account/storage'),
                         ),
                         _MenuItem(
                           iconAsset: 'assets/icons/accountinfo/Categories.webp',

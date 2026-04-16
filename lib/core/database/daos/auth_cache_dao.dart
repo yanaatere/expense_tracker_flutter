@@ -21,6 +21,15 @@ class AuthCacheDao {
     return AuthCacheEntry.fromMap(rows.first);
   }
 
+  Future<void> updateIsPremium(bool isPremium) async {
+    await _db.update(
+      'auth_cache',
+      {'is_premium': isPremium ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+  }
+
   Future<void> updateAfterSync({
     required String serverId,
     required String token,

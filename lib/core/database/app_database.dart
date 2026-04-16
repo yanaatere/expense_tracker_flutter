@@ -13,7 +13,7 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'monex.db');
     return openDatabase(
       path,
-      version: 5,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -29,7 +29,8 @@ class AppDatabase {
         password_hash  TEXT NOT NULL,
         token          TEXT,
         token_saved_at INTEGER,
-        synced_at      INTEGER
+        synced_at      INTEGER,
+        is_premium     INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -49,18 +50,23 @@ class AppDatabase {
 
     await db.execute('''
       CREATE TABLE expenses (
-        id           TEXT PRIMARY KEY,
-        server_id    TEXT,
-        user_id      TEXT NOT NULL,
-        title        TEXT NOT NULL,
-        amount       REAL NOT NULL,
-        category     TEXT NOT NULL,
-        note         TEXT,
-        expense_date INTEGER NOT NULL,
-        created_at   INTEGER NOT NULL,
-        updated_at   INTEGER NOT NULL,
-        is_deleted   INTEGER NOT NULL DEFAULT 0,
-        sync_status  TEXT NOT NULL DEFAULT 'local'
+        id                TEXT PRIMARY KEY,
+        server_id         TEXT,
+        user_id           TEXT NOT NULL,
+        title             TEXT NOT NULL,
+        amount            REAL NOT NULL,
+        category          TEXT NOT NULL,
+        note              TEXT,
+        expense_date      INTEGER NOT NULL,
+        created_at        INTEGER NOT NULL,
+        updated_at        INTEGER NOT NULL,
+        is_deleted        INTEGER NOT NULL DEFAULT 0,
+        sync_status       TEXT NOT NULL DEFAULT 'local',
+        type              TEXT NOT NULL DEFAULT 'expense',
+        category_id       INTEGER,
+        sub_category_id   INTEGER,
+        wallet_id         TEXT,
+        receipt_image_url TEXT
       )
     ''');
 
@@ -115,11 +121,15 @@ class AppDatabase {
   static Future<void> _createBudgetsTable(Database db) async {
     await db.execute('''
       CREATE TABLE budgets (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_name  TEXT NOT NULL UNIQUE,
-        monthly_limit  REAL NOT NULL,
-        created_at     INTEGER NOT NULL,
-        updated_at     INTEGER NOT NULL
+        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name        TEXT NOT NULL UNIQUE,
+        category_id          INTEGER,
+        monthly_limit        REAL NOT NULL,
+        period               TEXT NOT NULL DEFAULT 'monthly',
+        title                TEXT,
+        notification_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at           INTEGER NOT NULL,
+        updated_at           INTEGER NOT NULL
       )
     ''');
   }
@@ -138,6 +148,22 @@ class AppDatabase {
     }
     if (oldVersion < 5) {
       await _createBudgetsTable(db);
+    }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE expenses ADD COLUMN type TEXT NOT NULL DEFAULT \'expense\'');
+      await db.execute('ALTER TABLE expenses ADD COLUMN category_id INTEGER');
+      await db.execute('ALTER TABLE expenses ADD COLUMN sub_category_id INTEGER');
+      await db.execute('ALTER TABLE expenses ADD COLUMN wallet_id TEXT');
+      await db.execute('ALTER TABLE expenses ADD COLUMN receipt_image_url TEXT');
+    }
+    if (oldVersion < 7) {
+      await db.execute('ALTER TABLE auth_cache ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0');
+    }
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE budgets ADD COLUMN category_id INTEGER');
+      await db.execute("ALTER TABLE budgets ADD COLUMN period TEXT NOT NULL DEFAULT 'monthly'");
+      await db.execute('ALTER TABLE budgets ADD COLUMN title TEXT');
+      await db.execute('ALTER TABLE budgets ADD COLUMN notification_enabled INTEGER NOT NULL DEFAULT 0');
     }
   }
 }

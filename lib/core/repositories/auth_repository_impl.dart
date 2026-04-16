@@ -48,8 +48,10 @@ class AuthRepositoryImpl implements AuthRepository {
         final data = await AuthService.login(email: email, password: password);
         final token = data['token'] as String;
         final username = data['username'] as String;
+        final isPremium = data['is_premium'] as bool? ?? false;
         await LocalStorage.saveToken(token);
         await LocalStorage.saveUsername(username);
+        await LocalStorage.setPremium(isPremium);
         await LocalStorage.setOnboardingCompleted();
         try {
           final hash = _hashPassword(email, password);
@@ -62,6 +64,7 @@ class AuthRepositoryImpl implements AuthRepository {
             token: token,
             tokenSavedAt: DateTime.now().millisecondsSinceEpoch,
             syncedAt: DateTime.now().millisecondsSinceEpoch,
+            isPremium: isPremium,
           ));
         } catch (e) {
           debugPrint('[AuthRepository] Failed to cache credentials: $e');
@@ -82,6 +85,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return AuthResult.failure('Incorrect credentials (offline mode)');
       }
       await LocalStorage.saveUsername(cached.username);
+      await LocalStorage.setPremium(cached.isPremium);
       await LocalStorage.setOnboardingCompleted();
       if (cached.token != null) {
         await LocalStorage.saveToken(cached.token!);
@@ -175,9 +179,26 @@ class AuthRepositoryImpl implements AuthRepository {
       final data = await AuthService.loginWithGoogle(idToken: idToken);
       final token = data['token'] as String;
       final username = data['username'] as String;
+      final isPremium = data['is_premium'] as bool? ?? false;
       await LocalStorage.saveToken(token);
       await LocalStorage.saveUsername(username);
+      await LocalStorage.setPremium(isPremium);
       await LocalStorage.setOnboardingCompleted();
+      try {
+        await _authCacheDao.upsert(AuthCacheEntry(
+          id: 1,
+          userId: data['id']?.toString() ?? '',
+          username: username,
+          email: data['email'] as String? ?? '',
+          passwordHash: '',
+          token: token,
+          tokenSavedAt: DateTime.now().millisecondsSinceEpoch,
+          syncedAt: DateTime.now().millisecondsSinceEpoch,
+          isPremium: isPremium,
+        ));
+      } catch (e) {
+        debugPrint('[AuthRepository] Failed to cache Google credentials: $e');
+      }
       return AuthResult.online(token: token, username: username);
     } on DioException catch (e) {
       return AuthResult.failure(AuthService.errorMessage(e));

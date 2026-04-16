@@ -214,12 +214,15 @@ class _EditTransactionViewState extends State<_EditTransactionView> {
       );
       return;
     }
-    final rawId = widget.data['id'];
-    final id = rawId is int ? rawId : int.tryParse(rawId.toString());
-    if (id == null) return;
+    final localId = widget.data['local_id'] as String?;
+    final rawServerId = widget.data['id'];
+    final serverId = rawServerId?.toString();
+    // Require at least a local ID to proceed
+    if (localId == null && serverId == null) return;
 
     await context.read<TransactionFormCubit>().update(
-      transactionId: id,
+      localId: localId ?? serverId!,
+      serverId: serverId,
       amount: _amount,
       description: _titleController.text,
       date: _selectedDate,
@@ -1028,7 +1031,7 @@ class _PickerSheet extends StatelessWidget {
 
 class _WalletSheet extends StatelessWidget {
   final List<Map<String, dynamic>> wallets;
-  final int? selectedId;
+  final dynamic selectedId;
   const _WalletSheet({required this.wallets, this.selectedId});
 
   @override

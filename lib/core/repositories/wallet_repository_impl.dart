@@ -9,6 +9,7 @@ import '../database/daos/wallet_dao.dart';
 import '../models/sync_item.dart';
 import '../models/wallet.dart';
 import '../services/wallet_service.dart';
+import '../storage/local_storage.dart';
 import '../sync/connectivity_service.dart';
 import 'wallet_repository.dart';
 
@@ -52,6 +53,10 @@ class WalletRepositoryImpl implements WalletRepository {
   Future<List<Wallet>> getWallets() async {
     final userId = await _userId;
 
+    if (!await LocalStorage.isPremium()) {
+      return _walletDao.getAll(userId);
+    }
+
     if (await _connectivity.isOnline()) {
       try {
         final remote = await WalletService.getWallets();
@@ -75,6 +80,19 @@ class WalletRepositoryImpl implements WalletRepository {
     String? goals,
   }) async {
     final userId = await _userId;
+
+    if (!await LocalStorage.isPremium()) {
+      final wallet = Wallet.create(
+        userId: userId,
+        name: name,
+        type: type,
+        currency: currency,
+        balance: balance,
+        goals: goals,
+      );
+      await _walletDao.insert(wallet);
+      return wallet;
+    }
 
     if (await _connectivity.isOnline()) {
       try {
@@ -133,6 +151,19 @@ class WalletRepositoryImpl implements WalletRepository {
     final userId = await _userId;
     final serverId = wallet.serverId != null ? int.tryParse(wallet.serverId!) : null;
 
+    if (!await LocalStorage.isPremium()) {
+      final updated = wallet.copyWith(
+        name: name,
+        type: type,
+        currency: currency,
+        balance: balance,
+        goals: goals,
+        backdropImage: backdropImage,
+      );
+      await _walletDao.update(updated);
+      return updated;
+    }
+
     if (await _connectivity.isOnline() && serverId != null) {
       try {
         final data = await WalletService.updateWallet(
@@ -185,6 +216,11 @@ class WalletRepositoryImpl implements WalletRepository {
   @override
   Future<void> deleteWallet({required Wallet wallet}) async {
     final serverId = wallet.serverId != null ? int.tryParse(wallet.serverId!) : null;
+
+    if (!await LocalStorage.isPremium()) {
+      await _walletDao.delete(wallet.id);
+      return;
+    }
 
     if (await _connectivity.isOnline() && serverId != null) {
       try {

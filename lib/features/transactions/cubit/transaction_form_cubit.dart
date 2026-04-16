@@ -6,12 +6,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/category_definitions.dart';
 import '../../../core/models/wallet.dart';
+import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/services/transaction_service.dart';
 import '../../../service_locator.dart';
 import 'transaction_form_state.dart';
 
 class TransactionFormCubit extends Cubit<TransactionFormState> {
-  TransactionFormCubit() : super(const TransactionFormState());
+  final TransactionRepository _transactionRepository;
+
+  TransactionFormCubit({TransactionRepository? transactionRepository})
+      : _transactionRepository =
+            transactionRepository ?? ServiceLocator.transactionRepository,
+        super(const TransactionFormState());
 
   /// Load wallets + categories. Pass [existingData] for edit mode to pre-select
   /// the saved category, sub-category, wallet, and receipt URL.
@@ -26,14 +32,16 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
         .getWallets()
         .catchError((_) => <Wallet>[]);
 
+    // Include all wallets — local-only wallets have null server ID but are still
+    // valid for free users.
     final mappedWallets = wallets
         .map((w) => <String, dynamic>{
-              'id': w.serverId != null ? int.tryParse(w.serverId!) : null,
+              'id': w.serverId ?? w.id,
+              'server_id': w.serverId,
               'name': w.name,
               'type': w.type,
               'balance': w.balance,
             })
-        .where((m) => m['id'] != null)
         .toList();
 
     final categories = localCategories(type: type);
@@ -68,11 +76,13 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
       }
 
       final rawWalletId = existingData['wallet_id'];
-      final walletId =
-          rawWalletId is int ? rawWalletId : int.tryParse(rawWalletId.toString());
-      if (walletId != null) {
+      if (rawWalletId != null) {
+        final walletIdStr = rawWalletId.toString();
         try {
-          selectedWallet = mappedWallets.firstWhere((w) => w['id'] == walletId);
+          selectedWallet = mappedWallets.firstWhere(
+            (w) => w['id'].toString() == walletIdStr ||
+                w['server_id']?.toString() == walletIdStr,
+          );
         } catch (_) {}
       }
     }
@@ -154,17 +164,44 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
     emit(state.copyWith(submitting: true, clearSubmitError: true));
     try {
       final dt = _combineDateAndTime(date, time);
-      await TransactionService.createTransaction(
+      // wallet_id: use server ID if available, otherwise local ID (will be null
+      // in toApiMap for local-only wallets, which is acceptable)
+      final walletId = state.selectedWallet?['id'] as String?;
+      await _transactionRepository.createTransaction(
         type: state.transactionType,
         amount: amount,
         description: description,
+        note: note,
+        date: dt,
         categoryId: state.selectedCategory?['id'] as int?,
         subCategoryId: state.selectedSubCategory?['id'] as int?,
-        walletId: state.selectedWallet?['id'] as int?,
-        date: dt.toIso8601String(),
+        walletId: walletId,
         receiptImageUrl: state.receiptUrl,
       );
       if (!isClosed) emit(state.copyWith(submitting: false, submitSuccess: true));
+
+      // Check if this expense exceeded any budget.
+      if (state.transactionType == 'expense') {
+        final catId = state.selectedCategory?['id'] as int?;
+        if (catId != null) {
+          try {
+            final budget = await ServiceLocator.budgetDao.getForCategory(catId);
+            if (budget != null) {
+              final entry = await ServiceLocator.authCacheDao.get();
+              if (entry != null) {
+                final spending = await ServiceLocator.budgetDao
+                    .getCurrentSpending(budget, entry.userId);
+                if (spending >= budget.monthlyLimit && !isClosed) {
+                  emit(state.copyWith(
+                    budgetWarning:
+                        '⚠️ You\'ve exceeded your ${budget.displayName} budget!',
+                  ));
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
     } on DioException catch (e) {
       if (!isClosed) {
         emit(state.copyWith(
@@ -183,7 +220,8 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
   }
 
   Future<void> update({
-    required int transactionId,
+    required String localId,
+    String? serverId,
     required double amount,
     required String description,
     required DateTime date,
@@ -191,17 +229,18 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
   }) async {
     emit(state.copyWith(submitting: true, clearSubmitError: true));
     try {
-      final dateStr =
-          '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      await TransactionService.updateTransaction(
-        id: transactionId,
+      final dt = _combineDateAndTime(date, time);
+      final walletId = state.selectedWallet?['id'] as String?;
+      await _transactionRepository.updateTransaction(
+        localId: localId,
+        serverId: serverId,
         type: state.transactionType,
         amount: amount,
         description: description,
+        date: dt,
         categoryId: state.selectedCategory?['id'] as int?,
         subCategoryId: state.selectedSubCategory?['id'] as int?,
-        walletId: state.selectedWallet?['id'] as int?,
-        date: dateStr,
+        walletId: walletId,
         receiptImageUrl: state.receiptUrl,
       );
       if (!isClosed) emit(state.copyWith(submitting: false, submitSuccess: true));

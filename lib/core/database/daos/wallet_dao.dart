@@ -50,6 +50,10 @@ class WalletDao {
     return rows.map(Wallet.fromMap).toList();
   }
 
+  Future<void> deleteAllForUser(String userId) async {
+    await _db.delete('wallets', where: 'user_id = ?', whereArgs: [userId]);
+  }
+
   Future<void> delete(String id) async {
     await _db.delete('wallets', where: 'id = ?', whereArgs: [id]);
   }

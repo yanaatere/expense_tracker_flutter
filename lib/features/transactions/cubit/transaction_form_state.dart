@@ -11,6 +11,7 @@ class TransactionFormState {
   final bool submitting;
   final bool submitSuccess;
   final String? submitError;
+  final String? budgetWarning;
 
   const TransactionFormState({
     this.transactionType = 'income',
@@ -25,6 +26,7 @@ class TransactionFormState {
     this.submitting = false,
     this.submitSuccess = false,
     this.submitError,
+    this.budgetWarning,
   });
 
   TransactionFormState copyWith({
@@ -40,10 +42,12 @@ class TransactionFormState {
     bool? submitting,
     bool? submitSuccess,
     String? submitError,
+    String? budgetWarning,
     bool clearSelectedCategory = false,
     bool clearSelectedSubCategory = false,
     bool clearReceiptUrl = false,
     bool clearSubmitError = false,
+    bool clearBudgetWarning = false,
   }) {
     return TransactionFormState(
       transactionType: transactionType ?? this.transactionType,
@@ -60,6 +64,7 @@ class TransactionFormState {
       submitting: submitting ?? this.submitting,
       submitSuccess: submitSuccess ?? this.submitSuccess,
       submitError: clearSubmitError ? null : (submitError ?? this.submitError),
+      budgetWarning: clearBudgetWarning ? null : (budgetWarning ?? this.budgetWarning),
     );
   }
 }

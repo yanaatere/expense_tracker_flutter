@@ -1,12 +1,18 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/models/transaction.dart';
+import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/services/transaction_service.dart';
 import '../../../core/storage/local_storage.dart';
+import '../../../service_locator.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit() : super(const HomeState());
+  final TransactionRepository _transactionRepository;
+
+  HomeCubit({TransactionRepository? transactionRepository})
+      : _transactionRepository =
+            transactionRepository ?? ServiceLocator.transactionRepository,
+        super(const HomeState());
 
   Future<void> load() async {
     await Future.wait([_loadUser(), _loadTransactions(), _loadSummary()]);
@@ -30,8 +36,7 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> _loadTransactions() async {
     try {
-      final data = await TransactionService.getRecentTransactions(limit: 10);
-      final txns = data.map(Transaction.fromApi).toList();
+      final txns = await _transactionRepository.getRecentTransactions(limit: 10);
       if (!isClosed) {
         emit(state.copyWith(
           transactions: txns,
