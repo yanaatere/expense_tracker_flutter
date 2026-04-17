@@ -27,11 +27,76 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> _loadSummary() async {
     try {
-      final data = await TransactionService.getHomeSummary();
+      final entry = await ServiceLocator.authCacheDao.get();
+      final userId = entry?.userId ?? '';
+      final isPremium = await LocalStorage.isPremium();
+
+      Map<String, dynamic>? data;
+
+      if (isPremium) {
+        try {
+          data = await TransactionService.getHomeSummary();
+        } catch (_) {
+          // API failed — fall through to local computation
+        }
+      }
+
+      data ??= await _computeLocalSummary(userId);
+
       if (!isClosed) emit(state.copyWith(summary: data, loadingSummary: false));
     } catch (_) {
       if (!isClosed) emit(state.copyWith(loadingSummary: false));
     }
+  }
+
+  Future<Map<String, dynamic>> _computeLocalSummary(String userId) async {
+    final now = DateTime.now();
+    final currentMonthStart =
+        DateTime(now.year, now.month, 1).millisecondsSinceEpoch;
+    final prevMonthStart =
+        DateTime(now.year, now.month - 1, 1).millisecondsSinceEpoch;
+
+    final all = await ServiceLocator.expenseDao.getAll(userId);
+    final wallets = await ServiceLocator.walletDao.getAll(userId);
+
+    double totalExpense = 0;
+    double prevMonthExpense = 0;
+    double totalIncome = 0;
+
+    for (final e in all) {
+      if (e.type == 'expense' && e.expenseDate >= currentMonthStart) {
+        totalExpense += e.amount.abs();
+      }
+      if (e.type == 'expense' &&
+          e.expenseDate >= prevMonthStart &&
+          e.expenseDate < currentMonthStart) {
+        prevMonthExpense += e.amount.abs();
+      }
+      if (e.type == 'income' && e.expenseDate >= currentMonthStart) {
+        totalIncome += e.amount.abs();
+      }
+    }
+
+    final pctChange = prevMonthExpense > 0
+        ? ((totalExpense - prevMonthExpense) / prevMonthExpense) * 100
+        : 0.0;
+
+    final totalBalance =
+        wallets.fold<double>(0, (sum, w) => sum + w.balance);
+
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+
+    return {
+      'total_expense': totalExpense,
+      'prev_month_expense': prevMonthExpense,
+      'expense_percent_change': pctChange,
+      'current_month_label': '${months[now.month - 1]} ${now.year}',
+      'total_balance': totalBalance,
+      'total_income': totalIncome,
+    };
   }
 
   Future<void> _loadTransactions() async {

@@ -58,7 +58,7 @@ class Transaction {
     );
   }
 
-  factory Transaction.fromExpense(Expense e) {
+  factory Transaction.fromExpense(Expense e, {String? walletName}) {
     final type = e.type;
     double amount = e.amount.abs();
     if (type == 'expense') amount = -amount;
@@ -86,7 +86,8 @@ class Transaction {
       'amount': e.amount.abs(),
       'category_id': e.categoryId,
       'sub_category_id': e.subCategoryId,
-      'wallet_id': e.walletId != null ? int.tryParse(e.walletId!) : null,
+      'wallet_id': e.walletId,
+      'wallet_name': walletName ?? '',
       'receipt_image_url': e.receiptImageUrl,
       'notes': e.note,
     };

@@ -8,9 +8,7 @@ import '../../service_locator.dart';
 import '../../shared/widgets/primary_button.dart';
 import '../../../core/theme/app_colors_theme.dart';
 
-// ---------------------------------------------------------------------------
-// Premium Screen
-// ---------------------------------------------------------------------------
+enum _Plan { monthly, annual, lifetime }
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key});
@@ -20,36 +18,111 @@ class PremiumScreen extends StatefulWidget {
 }
 
 class _PremiumScreenState extends State<PremiumScreen> {
-  bool _activating = false;
+  _Plan _selected = _Plan.monthly;
+  bool _subscribing = false;
 
-  Future<void> _activate() async {
-    setState(() => _activating = true);
+  Future<void> _subscribe() async {
+    // Local-mode users must create an account before going premium.
+    if (await LocalStorage.isLocalMode()) {
+      if (mounted) _showAccountRequiredSheet();
+      return;
+    }
+
+    setState(() => _subscribing = true);
     try {
-      // Activate premium on the backend first
       final entry = await ServiceLocator.authCacheDao.get();
       if (entry != null) {
         await AuthService.setPremium(userId: entry.userId, isPremium: true);
       }
       await LocalStorage.setPremium(true);
       await ServiceLocator.authCacheDao.updateIsPremium(true);
-      // Bulk-push all locally saved data to the API now that user is premium.
       await ServiceLocator.syncService.bulkPushLocalData();
       if (mounted) context.pop(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Activation failed: $e')),
+          SnackBar(content: Text('Subscription failed: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _activating = false);
+      if (mounted) setState(() => _subscribing = false);
     }
+  }
+
+  void _showAccountRequiredSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const Icon(Icons.lock_outline_rounded,
+                size: 40, color: Color(0xFF635AFF)),
+            const SizedBox(height: 12),
+            Text(
+              'Account required',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: context.appColors.labelText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create a free account to subscribe to premium. Your local data will be preserved and synced.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: context.appColors.placeholderText,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Create Account',
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/create-account');
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Not now',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: context.appColors.placeholderText,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-body: SafeArea(
+      backgroundColor: context.appColors.background,
+      body: SafeArea(
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────────
@@ -62,173 +135,99 @@ body: SafeArea(
                     color: context.appColors.labelText,
                     onPressed: () => context.pop(false),
                   ),
-                  const Expanded(child: SizedBox()),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Text('💎', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Premium',
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: context.appColors.labelText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
                   const SizedBox(width: 48),
                 ],
               ),
             ),
 
+            // ── Scrollable content ───────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                 child: Column(
                   children: [
-                    // ── Hero ─────────────────────────────────────────────────
-                    Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF635AFF), Color(0xFF9B8FFF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Icon(
-                        Icons.workspace_premium_rounded,
-                        color: Colors.white,
-                        size: 48,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
                     Text(
-                      'Monex Premium',
-                      style: GoogleFonts.urbanist(
-                        fontSize: 26,
+                      'Choose Your Plan',
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                         color: context.appColors.labelText,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'AI-powered insights, smart tools,\nand full control of your finances.',
+                      'Take full control of your wealth with advanced financial tools',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.urbanist(
-                        fontSize: 14,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
                         color: context.appColors.placeholderText,
                         height: 1.5,
                       ),
                     ),
+                    const SizedBox(height: 28),
 
-                    const SizedBox(height: 32),
-
-                    // ── AI section label ─────────────────────────────────────
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF635AFF), Color(0xFF9B8FFF)],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.auto_awesome_rounded,
-                                color: Colors.white, size: 13),
-                            const SizedBox(width: 4),
-                            Text(
-                              'AI Features',
-                              style: GoogleFonts.urbanist(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    // ── Plan cards ───────────────────────────────────────────
+                    _PlanCard(
+                      selected: _selected == _Plan.monthly,
+                      onTap: () => setState(() => _selected = _Plan.monthly),
+                      title: 'Premium Monthly Plan',
+                      price: 'Rp. 9,900',
+                      period: '/ Month',
+                      badges: const [_Badge(label: '7 Days Free')],
+                      billingNote: 'Billed Monthly',
                     ),
-                    const SizedBox(height: 10),
-                    _FeatureCard(
-                      icon: Icons.chat_bubble_rounded,
-                      color: const Color(0xFF635AFF),
-                      title: 'AI Financial Chat',
-                      subtitle: 'Ask anything about your spending in plain language',
+                    const SizedBox(height: 16),
+                    _PlanCard(
+                      selected: _selected == _Plan.annual,
+                      onTap: () => setState(() => _selected = _Plan.annual),
+                      title: 'Premium Anually Plan',
+                      price: 'Rp. 99,000',
+                      period: '/ Year',
+                      badges: const [
+                        _Badge(label: '7 Days Free'),
+                        _Badge(label: 'Save 16%'),
+                      ],
+                      billingNote: 'Billed every Year',
                     ),
-                    const SizedBox(height: 12),
-                    _FeatureCard(
-                      icon: Icons.document_scanner_rounded,
-                      color: const Color(0xFF8B5CF6),
-                      title: 'Smart Receipt Scan',
-                      subtitle: 'Auto-fill transactions by scanning any receipt',
+                    const SizedBox(height: 16),
+                    _PlanCard(
+                      selected: _selected == _Plan.lifetime,
+                      onTap: () => setState(() => _selected = _Plan.lifetime),
+                      title: 'Lifetime access',
+                      price: 'Rp. 199,000',
+                      period: '',
+                      badges: const [_Badge(label: 'One Time Payment')],
+                      billingNote: '',
                     ),
-                    const SizedBox(height: 12),
-                    _FeatureCard(
-                      icon: Icons.bar_chart_rounded,
-                      color: const Color(0xFFEC4899),
-                      title: 'Monthly AI Report',
-                      subtitle: 'Get a smart narrative summary of your monthly spend',
-                    ),
-                    const SizedBox(height: 12),
-                    _FeatureCard(
-                      icon: Icons.lightbulb_rounded,
-                      color: const Color(0xFFF59E0B),
-                      title: 'AI Budget Recommendations',
-                      subtitle: 'AI suggests realistic limits based on your history',
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Core features label ───────────────────────────────────
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Core Features',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: context.appColors.placeholderText,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _FeatureCard(
-                      icon: Icons.sync_rounded,
-                      color: const Color(0xFF10B981),
-                      title: 'Unlimited Recurring Transactions',
-                      subtitle: 'Free plan is limited to 3 scheduled transactions',
-                    ),
-                    const SizedBox(height: 12),
-                    _FeatureCard(
-                      icon: Icons.pie_chart_rounded,
-                      color: const Color(0xFF3B82F6),
-                      title: 'Monthly Budget Tracking',
-                      subtitle: 'Set spending limits per category and stay on track',
-                    ),
-                    const SizedBox(height: 12),
-                    _FeatureCard(
-                      icon: Icons.file_download_rounded,
-                      color: const Color(0xFF06B6D4),
-                      title: 'Data Export (CSV)',
-                      subtitle: 'Export your full transaction history anytime',
-                    ),
-
-                    const SizedBox(height: 36),
-
-                    // ── CTA ──────────────────────────────────────────────────
-                    PrimaryButton(
-                      label: 'Activate Premium',
-                      isLoading: _activating,
-                      onPressed: _activate,
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () => context.pop(false),
-                      child: Text(
-                        'Maybe Later',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 14,
-                          color: context.appColors.placeholderText,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
+              ),
+            ),
+
+            // ── Subscribe button ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: PrimaryButton(
+                label: 'Subscribe',
+                isLoading: _subscribing,
+                onPressed: _subscribe,
               ),
             ),
           ],
@@ -238,69 +237,134 @@ body: SafeArea(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Feature card
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan card
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final Color color;
+class _PlanCard extends StatelessWidget {
+  final bool selected;
+  final VoidCallback onTap;
   final String title;
-  final String subtitle;
-  const _FeatureCard({
-    required this.icon,
-    required this.color,
+  final String price;
+  final String period;
+  final List<_Badge> badges;
+  final String billingNote;
+
+  const _PlanCard({
+    required this.selected,
+    required this.onTap,
     required this.title,
-    required this.subtitle,
+    required this.price,
+    required this.period,
+    required this.badges,
+    required this.billingNote,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        padding: const EdgeInsets.all(16),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         decoration: BoxDecoration(
-          color: color.withAlpha(12),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withAlpha(30)),
+          color: const Color(0xFFF0EFFF),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFF635AFF) : Colors.transparent,
+            width: 2,
+          ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1A1A2E),
               ),
-              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: context.appColors.labelText,
-                    ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  price,
+                  style: GoogleFonts.inter(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1A1A2E),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 12,
-                      color: context.appColors.placeholderText,
+                ),
+                if (period.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      period,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1A1A2E),
+                      ),
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-            Icon(Icons.check_circle_rounded, color: color, size: 20),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ...badges,
+                if (billingNote.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    billingNote,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Badge pill
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Badge extends StatelessWidget {
+  final String label;
+  const _Badge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF635AFF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,7 @@ import 'features/wallet/wallet_expense_screen.dart';
 import 'features/wallet/wallet_income_screen.dart';
 import 'features/wallet/wallet_transaction_screen.dart';
 import 'service_locator.dart';
+import 'features/auth/local_setup_screen.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/auth/pin_login_screen.dart';
 import 'features/home/home_screen.dart';
@@ -32,6 +34,7 @@ import 'features/account/categories_screen.dart';
 import 'features/budget/budget_screen.dart';
 import 'features/budget/add_budget_screen.dart';
 import 'features/budget/budget_detail_screen.dart';
+import 'features/budget/cubit/budget_cubit.dart';
 import 'core/dao/budget_dao.dart';
 import 'features/premium/premium_screen.dart';
 import 'features/account/edit_profile_screen.dart';
@@ -46,6 +49,7 @@ import 'features/account/backup_screen.dart';
 import 'features/account/storage_maintenance_screen.dart';
 import 'features/account/export_backup_screen.dart';
 import 'features/account/restore_data_screen.dart';
+import 'features/report/report_screen.dart';
 
 class MonexApp extends StatefulWidget {
   const MonexApp({super.key});
@@ -62,7 +66,8 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ApiClient.onUnauthorized = () {
+    ApiClient.onUnauthorized = () async {
+      if (await LocalStorage.isLocalMode()) return;
       LocalStorage.clearAll();
       _router.go('/signin');
     };
@@ -87,6 +92,7 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
   }
 
   Future<void> _refreshPremiumStatus() async {
+    if (await LocalStorage.isLocalMode()) return;
     try {
       final isPremium = await AuthService.fetchIsPremium();
       await LocalStorage.setPremium(isPremium);
@@ -97,6 +103,7 @@ class _MonexAppState extends State<MonexApp> with WidgetsBindingObserver {
     if (_checkingExpiry) return;
     _checkingExpiry = true;
     try {
+      if (await LocalStorage.isLocalMode()) return;
       final expired = await LocalStorage.isSessionExpired();
       if (expired) {
         if (await LocalStorage.isPinEnabled()) {
@@ -156,8 +163,8 @@ final _router = GoRouter(
 
     if (!isAuth) return null;
 
-    // Session expired after being killed in background
-    if (await LocalStorage.isSessionExpired()) {
+    // Session expired after being killed in background (skip for local-mode users)
+    if (!await LocalStorage.isLocalMode() && await LocalStorage.isSessionExpired()) {
       if (await LocalStorage.isPinEnabled()) {
         await LocalStorage.clearLastActiveAt();
         if (loc == '/pin-login') return null;
@@ -177,6 +184,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/local-setup',
+      builder: (context, state) => const LocalSetupScreen(),
     ),
     GoRoute(
       path: '/signin',
@@ -282,16 +293,21 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/budget/add',
-      builder: (context, state) =>
-          AddBudgetScreen(existing: state.extra as Budget?),
+      builder: (context, state) => BlocProvider(
+        create: (_) => BudgetCubit()..load(),
+        child: AddBudgetScreen(existing: state.extra as Budget?),
+      ),
     ),
     GoRoute(
       path: '/budget/detail',
       builder: (context, state) {
         final data = state.extra as Map<String, dynamic>;
-        return BudgetDetailScreen(
-          budget: data['budget'] as Budget,
-          spending: data['spending'] as double,
+        return BlocProvider(
+          create: (_) => BudgetCubit()..load(),
+          child: BudgetDetailScreen(
+            budget: data['budget'] as Budget,
+            spending: data['spending'] as double,
+          ),
         );
       },
     ),
@@ -374,6 +390,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/account/storage',
       builder: (context, state) => const StorageMaintenanceScreen(),
+    ),
+    GoRoute(
+      path: '/report',
+      builder: (context, state) => const ReportScreen(),
     ),
   ],
 );

@@ -12,7 +12,7 @@ class LocalStorage {
   static const _appInstalledKey = 'app_installed';
   static const _pinKey = 'user_pin';
   static const _pinEnabledKey = 'pin_enabled';
-  static const sessionTimeout = Duration(minutes: 5);
+  static const sessionTimeout = Duration(minutes: 30);
 
   // ── Token (secure storage) ──────────────────────────────────────────────────
 
@@ -200,6 +200,20 @@ class LocalStorage {
     return prefs.getInt(_retentionMonthsKey) ?? 3;
   }
 
+  // ── Local (offline-only) mode (shared prefs) ────────────────────────────────
+
+  static const _localModeKey = 'local_mode';
+
+  static Future<void> setLocalMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_localModeKey, value);
+  }
+
+  static Future<bool> isLocalMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_localModeKey) ?? false;
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
 
   static Future<void> clearAll() async {
@@ -210,5 +224,6 @@ class LocalStorage {
     await prefs.remove(_onboardingKey);
     await prefs.remove(_lastActiveKey);
     await prefs.remove(_pinEnabledKey);
+    await prefs.remove(_localModeKey);
   }
 }

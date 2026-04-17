@@ -91,32 +91,119 @@ class _RestoreDataScreenState extends State<RestoreDataScreen> {
   Future<bool> _showConfirmDialog() async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Overwrite existing data?',
-          style: GoogleFonts.urbanist(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'This will permanently overwrite your current data. This action cannot be undone.',
-          style: GoogleFonts.urbanist(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: GoogleFonts.urbanist()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Restore',
-              style: GoogleFonts.urbanist(
-                color: Colors.red,
-                fontWeight: FontWeight.w700,
+      barrierColor: Colors.black.withAlpha(100),
+      builder: (ctx) => Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Warning icon
+              Image.asset(
+                'assets/icons/warning.png',
+                width: 64,
+                height: 64,
+                errorBuilder: (_, e, s) => const Icon(
+                  Icons.warning_rounded,
+                  color: Color(0xFFF59E0B),
+                  size: 64,
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
+              // Body text
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: GoogleFonts.urbanist(
+                    fontSize: 14,
+                    color: const Color(0xFF6B6B6B),
+                    height: 1.5,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: 'Warning: ',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2D2D2D)),
+                    ),
+                    TextSpan(text: 'Restoring data will '),
+                    TextSpan(
+                      text: 'permanently',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(
+                        text:
+                            ' overwrite your current transactions and settings with the backup file data. This action cannot be '),
+                    TextSpan(
+                      text: 'undone',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Are you sure you want to proceed?',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF2D2D2D),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFD0D0D0)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40)),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF6B6B6B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF8784),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40)),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Proceed',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
     return result ?? false;

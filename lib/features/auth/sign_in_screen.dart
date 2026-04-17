@@ -139,110 +139,119 @@ class _SignInScreenState extends State<SignInScreen>
           // Bottom sheet card
           Align(
             alignment: Alignment.bottomCenter,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: FractionallySizedBox(
-                heightFactor: 0.85,
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(40)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 40,
-                        offset: Offset(0, -10),
-                      )
-                    ],
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Drag handle
-                        Center(
-                          child: Container(
-                            width: 48,
-                            height: 6,
-                            margin: const EdgeInsets.only(bottom: 24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5E7EB),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        ),
-
-                        Text('sign in', style: AppTextStyles.heading),
-                        const SizedBox(height: 16),
-
-                        // Error banner
-                        if (_errorMessage.isNotEmpty) ...[
-                          _ErrorBanner(message: _errorMessage),
-                          const SizedBox(height: 12),
-                        ],
-
-                        RoundedTextField(
-                          label: 'Email / Username',
-                          placeholder: 'johndoe@sample.com',
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-                        RoundedTextField(
-                          label: 'Password',
-                          placeholder: 'Enter your password',
-                          controller: _passwordController,
-                          obscureText: !_showPassword,
-                          showToggle: true,
-                          onToggle: () =>
-                              setState(() => _showPassword = !_showPassword),
-                          textInputAction: TextInputAction.done,
-                        ),
-
-                        // Forgot password
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {},
-                            child: const Text(
-                              'Forgot password ?',
-                              style: TextStyle(
-                                color: Color(0xFF635AFF),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        PrimaryButton(
-                          label: _isLoading ? 'Signing in...' : 'Sign in',
-                          isLoading: _isLoading,
-                          onPressed: _handleSignIn,
-                        ),
-                        const SizedBox(height: 32),
-                        SocialLoginButtons(
-                          onGooglePressed:
-                              _isGoogleLoading ? null : _handleGoogleSignIn,
-                        ),
-                        if (_isGoogleLoading) ...[
-                          const SizedBox(height: 12),
-                          const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF635AFF),
-                              ),
-                            ),
-                          ),
-                        ],
+            child: GestureDetector(
+              onVerticalDragEnd: (details) {
+                final velocity = details.primaryVelocity ?? 0;
+                // Swipe down dengan kecepatan > 300 px/s → kembali ke home
+                if (velocity > 300) {
+                  context.pop();
+                }
+              },
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: FractionallySizedBox(
+                  heightFactor: 0.85,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(40)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 40,
+                          offset: Offset(0, -10),
+                        )
                       ],
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Drag handle
+                          Center(
+                            child: Container(
+                              width: 48,
+                              height: 6,
+                              margin: const EdgeInsets.only(bottom: 24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5E7EB),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                          ),
+
+                          Text('sign in', style: AppTextStyles.heading),
+                          const SizedBox(height: 16),
+
+                          // Error banner
+                          if (_errorMessage.isNotEmpty) ...[
+                            _ErrorBanner(message: _errorMessage),
+                            const SizedBox(height: 12),
+                          ],
+
+                          RoundedTextField(
+                            label: 'Email / Username',
+                            placeholder: 'johndoe@sample.com',
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
+                          RoundedTextField(
+                            label: 'Password',
+                            placeholder: 'Enter your password',
+                            controller: _passwordController,
+                            obscureText: !_showPassword,
+                            showToggle: true,
+                            onToggle: () =>
+                                setState(() => _showPassword = !_showPassword),
+                            textInputAction: TextInputAction.done,
+                          ),
+
+                          // Forgot password
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {},
+                              child: const Text(
+                                'Forgot password ?',
+                                style: TextStyle(
+                                  color: Color(0xFF635AFF),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          PrimaryButton(
+                            label: _isLoading ? 'Signing in...' : 'Sign in',
+                            isLoading: _isLoading,
+                            onPressed: _handleSignIn,
+                          ),
+                          const SizedBox(height: 32),
+                          SocialLoginButtons(
+                            onGooglePressed:
+                                _isGoogleLoading ? null : _handleGoogleSignIn,
+                          ),
+                          if (_isGoogleLoading) ...[
+                            const SizedBox(height: 12),
+                            const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF635AFF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

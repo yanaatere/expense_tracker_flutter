@@ -73,6 +73,21 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.push('/local-setup'),
+                      child: Text(
+                        'Continue without account',
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.white.withAlpha(179),
+                          fontSize: 14,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.white.withAlpha(179),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

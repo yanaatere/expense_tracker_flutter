@@ -1,3 +1,12 @@
+import 'package:intl/intl.dart';
+
+class WalletBarPoint {
+  final String label;
+  final String rangeLabel;
+  final double amount;
+  const WalletBarPoint({required this.label, required this.rangeLabel, required this.amount});
+}
+
 class WalletTransactionFilterState {
   final List<Map<String, dynamic>> transactions;
   final bool loading;
@@ -42,6 +51,46 @@ class WalletTransactionFilterState {
       searchQuery: searchQuery ?? this.searchQuery,
       showStats: showStats ?? this.showStats,
     );
+  }
+
+  List<WalletBarPoint> get barData {
+    final now = DateTime.now();
+    if (monthly) {
+      final buckets = List<double>.filled(6, 0);
+      final monthNum = now.month.toString().padLeft(2, '0');
+      final monthAbbr = DateFormat('MMM').format(now);
+      final lastDay = DateTime(now.year, now.month + 1, 0).day;
+      for (final t in transactions) {
+        final date = _parseDate(t);
+        if (date.year != now.year || date.month != now.month) continue;
+        final rawAmount = t['amount'];
+        final amount = rawAmount is num ? rawAmount.toDouble() : double.tryParse(rawAmount.toString()) ?? 0;
+        final bucket = ((date.day - 1) ~/ 5).clamp(0, 5);
+        buckets[bucket] += amount;
+      }
+      final startDays = ['01', '06', '11', '16', '21', '26'];
+      final endDays = ['05', '10', '15', '20', '25', lastDay.toString().padLeft(2, '0')];
+      return List.generate(6, (i) => WalletBarPoint(
+        label: '${startDays[i]}/$monthNum',
+        rangeLabel: '${startDays[i]} - ${endDays[i]} / $monthAbbr',
+        amount: buckets[i],
+      ));
+    } else {
+      final monthAmounts = List<double>.filled(12, 0);
+      for (final t in transactions) {
+        final date = _parseDate(t);
+        if (date.year != now.year) continue;
+        final rawAmount = t['amount'];
+        final amount = rawAmount is num ? rawAmount.toDouble() : double.tryParse(rawAmount.toString()) ?? 0;
+        monthAmounts[date.month - 1] += amount;
+      }
+      const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return List.generate(12, (i) => WalletBarPoint(
+        label: monthLabels[i],
+        rangeLabel: '${monthLabels[i]} ${now.year}',
+        amount: monthAmounts[i],
+      ));
+    }
   }
 
   List<String> get periodOptions =>

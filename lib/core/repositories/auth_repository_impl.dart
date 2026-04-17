@@ -71,18 +71,25 @@ class AuthRepositoryImpl implements AuthRepository {
         }
         return AuthResult.online(token: token, username: username);
       } on DioException catch (e) {
-        return AuthResult.failure(AuthService.errorMessage(e));
+        // Server returned a real error (4xx/5xx) — surface it.
+        if (e.response != null) {
+          return AuthResult.failure(AuthService.errorMessage(e));
+        }
+        // Connection-level failure → fall through to cached credentials.
+        debugPrint('[AuthRepository] Login network error, trying cache: $e');
       } on Exception catch (e) {
         return AuthResult.failure(e.toString());
       }
-    } else {
+    }
+    // Offline or connection-level failure: try cached credentials.
+    {
       final cached = await _authCacheDao.get();
       if (cached == null) {
-        return AuthResult.failure('No network and no cached credentials');
+        return AuthResult.failure('Server unreachable and no saved credentials found');
       }
       final hash = _hashPassword(email, password);
       if (hash != cached.passwordHash) {
-        return AuthResult.failure('Incorrect credentials (offline mode)');
+        return AuthResult.failure('Incorrect credentials');
       }
       await LocalStorage.saveUsername(cached.username);
       await LocalStorage.setPremium(cached.isPremium);
@@ -128,13 +135,21 @@ class AuthRepositoryImpl implements AuthRepository {
           await LocalStorage.saveToken(data['token'] as String);
         }
         await LocalStorage.saveUsername(username);
+        await LocalStorage.setOnboardingCompleted();
         return AuthResult.online(username: username);
       } on DioException catch (e) {
-        return AuthResult.failure(AuthService.errorMessage(e));
+        // If server returned a meaningful error (4xx/5xx), surface it to the user.
+        if (e.response != null) {
+          return AuthResult.failure(AuthService.errorMessage(e));
+        }
+        // Connection-level failure (no server, timeout, etc.) → fall through to offline path.
+        debugPrint('[AuthRepository] Register network error, saving offline: $e');
       } on Exception catch (e) {
         return AuthResult.failure(e.toString());
       }
-    } else {
+    }
+    // Offline or connection-level network failure: save locally and queue for sync.
+    {
       final payload = jsonEncode({
         'username': username,
         'email': email,
@@ -157,6 +172,9 @@ class AuthRepositoryImpl implements AuthRepository {
         syncedAt: null,
       ));
       await LocalStorage.saveUsername(username);
+      // Treat as local user until sync completes — allows home screen access.
+      await LocalStorage.setLocalMode(true);
+      await LocalStorage.setOnboardingCompleted();
       return AuthResult.pending(username: username);
     }
   }
@@ -218,6 +236,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> isAuthenticated() async {
     final token = await LocalStorage.getToken();
-    return token != null;
+    if (token != null) return true;
+    return LocalStorage.isLocalMode();
   }
 }

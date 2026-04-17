@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../database/daos/auth_cache_dao.dart';
 import '../database/daos/expense_dao.dart';
 import '../database/daos/sync_queue_dao.dart';
+import '../database/daos/wallet_dao.dart';
 import '../models/expense.dart';
 import '../models/sync_item.dart';
 import '../models/transaction.dart';
@@ -18,16 +19,19 @@ class TransactionRepositoryImpl implements TransactionRepository {
   final ExpenseDao _expenseDao;
   final AuthCacheDao _authCacheDao;
   final SyncQueueDao _syncQueueDao;
+  final WalletDao _walletDao;
   final ConnectivityService _connectivity;
 
   TransactionRepositoryImpl({
     required ExpenseDao expenseDao,
     required AuthCacheDao authCacheDao,
     required SyncQueueDao syncQueueDao,
+    required WalletDao walletDao,
     required ConnectivityService connectivity,
   })  : _expenseDao = expenseDao,
         _authCacheDao = authCacheDao,
         _syncQueueDao = syncQueueDao,
+        _walletDao = walletDao,
         _connectivity = connectivity;
 
   Future<String> get _userId async {
@@ -51,7 +55,16 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
 
     final all = await _expenseDao.getAll(userId);
-    return all.take(limit).map(Transaction.fromExpense).toList();
+    // Build a walletLocalId → walletName map for the detail screen.
+    final wallets = await _walletDao.getAll(userId);
+    final walletNames = {for (final w in wallets) w.id: w.name};
+    return all
+        .take(limit)
+        .map((e) => Transaction.fromExpense(
+              e,
+              walletName: e.walletId != null ? walletNames[e.walletId] : null,
+            ))
+        .toList();
   }
 
   @override

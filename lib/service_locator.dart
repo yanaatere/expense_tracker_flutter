@@ -41,6 +41,9 @@ class ServiceLocator {
 
   static Future<void> setup() async {
     await LocalStorage.clearStaleKeychainIfNeeded();
+    // Reset timer sesi saat app fresh start — mencegah redirect ke /signin
+    // karena sesi "expired" dari run sebelumnya.
+    await LocalStorage.clearLastActiveAt();
 
     final db = await AppDatabase.database;
 
@@ -94,6 +97,7 @@ class ServiceLocator {
       expenseDao: expenseDao,
       authCacheDao: authCacheDao,
       syncQueueDao: syncQueueDao,
+      walletDao: walletDao,
       connectivity: connectivity,
     );
 
@@ -106,12 +110,21 @@ class ServiceLocator {
 
     _connectivitySubscription = connectivity.onConnectivityChanged.listen((online) async {
       if (online) {
+        // Hanya lanjutkan jika user sudah authenticated (ada token atau local mode)
+        // Tanpa pengecekan ini, API call akan menghasilkan 401 yang memicu
+        // onUnauthorized → redirect ke /signin meski user belum pernah login.
+        final token = await LocalStorage.getToken();
+        final isLocal = await LocalStorage.isLocalMode();
+        if (token == null && !isLocal) return;
+
         // Refresh premium status from BE (best-effort)
-        try {
-          final isPremium = await AuthService.fetchIsPremium();
-          await authCacheDao.updateIsPremium(isPremium);
-          await LocalStorage.setPremium(isPremium);
-        } catch (_) {}
+        if (token != null) {
+          try {
+            final isPremium = await AuthService.fetchIsPremium();
+            await authCacheDao.updateIsPremium(isPremium);
+            await LocalStorage.setPremium(isPremium);
+          } catch (_) {}
+        }
 
         await syncService.processQueue();
         if (await LocalStorage.isPremium()) {

@@ -29,28 +29,95 @@ class BudgetDetailScreen extends StatefulWidget {
   State<BudgetDetailScreen> createState() => _BudgetDetailScreenState();
 }
 
-class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
+class _BudgetDetailScreenState extends State<BudgetDetailScreen>
+    with SingleTickerProviderStateMixin {
   late Budget _budget;
   late double _spending;
+
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
+  bool get _shouldAlert => _budget.notificationEnabled && _pct >= 0.9;
 
   @override
   void initState() {
     super.initState();
     _budget = widget.budget;
     _spending = widget.spending;
+
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 7.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 7.0, end: -7.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -7.0, end: 7.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 7.0, end: -4.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -4.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut));
+
+    if (_shouldAlert) {
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _shakeController.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
   }
 
   double get _pct =>
-      _budget.monthlyLimit > 0 ? (_spending / _budget.monthlyLimit).clamp(0.0, 1.0) : 0.0;
+      _budget.monthlyLimit > 0 ? (_spending / _budget.monthlyLimit).clamp(0.0, 1.5) : 0.0;
 
-  Color get _barColor =>
-      _pct >= 1.0 ? Colors.red : _pct >= 0.8 ? Colors.orange : const Color(0xFF10B981);
+  String get _statusLabel {
+    if (_pct >= 1.0) return 'Overbudget';
+    if (_pct >= 0.9) return 'Warning';
+    if (_pct >= 0.3) return 'Normal';
+    return 'Safe';
+  }
 
-  String get _statusLabel =>
-      _pct >= 1.0 ? 'Exceeded' : _pct >= 0.8 ? 'Warning' : 'Normal';
+  Color get _statusColor {
+    if (_pct >= 1.0) return const Color(0xFFEF4444);
+    if (_pct >= 0.9) return const Color(0xFFF59E0B);
+    if (_pct >= 0.3) return const Color(0xFF10B981);
+    return const Color(0xFF635AFF);
+  }
 
-  Color get _statusColor =>
-      _pct >= 1.0 ? Colors.red : _pct >= 0.8 ? Colors.orange : const Color(0xFF10B981);
+  Color get _barColor => _statusColor;
+
+  String get _statusMessage {
+    final tier = (_pct * 10).floor().clamp(0, 10);
+    switch (tier) {
+      case 1:
+        return "Fresh start! You've only used a tiny bit of your budget. Off to a great start!";
+      case 2:
+        return "Looking good! You're keeping things well under control. Keep that momentum!";
+      case 3:
+        return "Nicely done! 30% in and you're still cruising smoothly. Practicality at its best!";
+      case 4:
+        return "Steady as she goes! You're approaching the halfway mark. Doing great so far!";
+      case 5:
+        return "Halfway there! You've used 50% of your budget. Plenty left for the rest of the week!";
+      case 6:
+        return "Passed the halfway point! Time to be a bit more mindful of those extra treats. You got this!";
+      case 7:
+        return "Heads up! You've used 70%. Maybe it's time to skip that extra latte? Just a thought!";
+      case 8:
+        return "The budget is getting cozy! 80% used. Let's prioritize the essentials for now.";
+      case 9:
+        return "Tighten the belt! You're at 90%. Almost at the limit—choose your next moves wisely!";
+      default:
+        if (tier >= 10) {
+          return "Target reached! You've hit your budget limit. Time to pause and prep for next week!";
+        }
+        return '';
+    }
+  }
 
   String get _periodBadgeLabel {
     switch (_budget.period) {
@@ -148,15 +215,22 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withAlpha(20),
-                              shape: BoxShape.circle,
+                          AnimatedBuilder(
+                            animation: _shakeController,
+                            builder: (context, child) => Transform.translate(
+                              offset: Offset(_shouldAlert ? _shakeAnimation.value : 0, 0),
+                              child: child,
                             ),
-                            child: const Icon(Icons.notifications_rounded,
-                                color: AppColors.primary, size: 20),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.notifications_rounded,
+                                  color: AppColors.primary, size: 20),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -191,15 +265,76 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                               await context
                                   .read<BudgetCubit>()
                                   .toggleNotification(_budget);
+                              final turningOn = !_budget.notificationEnabled;
                               setState(() {
                                 _budget = _budget.copyWith(
-                                  notificationEnabled: !_budget.notificationEnabled,
+                                  notificationEnabled: turningOn,
                                 );
                               });
+                              if (turningOn && _pct >= 0.9) {
+                                _shakeController.reset();
+                                _shakeController.forward();
+                              }
                             },
                           ),
                         ],
                       ),
+                    ),
+
+                    // ── Alert banner — uses AnimatedSize so it never ghost-reserves space ──
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      child: _shouldAlert
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _pct >= 1.0
+                                      ? const Color(0xFFEF4444).withAlpha(18)
+                                      : const Color(0xFFF59E0B).withAlpha(18),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: _pct >= 1.0
+                                        ? const Color(0xFFEF4444).withAlpha(80)
+                                        : const Color(0xFFF59E0B).withAlpha(80),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _pct >= 1.0
+                                          ? Icons.warning_rounded
+                                          : Icons.notifications_active_rounded,
+                                      color: _pct >= 1.0
+                                          ? const Color(0xFFEF4444)
+                                          : const Color(0xFFF59E0B),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _pct >= 1.0
+                                            ? 'Budget limit exceeded! You have spent more than your set budget for this category.'
+                                            : 'You\'re close to your budget limit! Only ${(100 - _pct * 100).toStringAsFixed(0)}% remaining.',
+                                        style: GoogleFonts.urbanist(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _pct >= 1.0
+                                              ? const Color(0xFFEF4444)
+                                              : const Color(0xFFF59E0B),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
 
                     const SizedBox(height: 24),
@@ -302,7 +437,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
-                        value: _pct,
+                        value: _pct.clamp(0.0, 1.0),
                         minHeight: 8,
                         backgroundColor: _barColor.withAlpha(30),
                         valueColor: AlwaysStoppedAnimation<Color>(_barColor),
@@ -310,33 +445,26 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                     ),
 
                     // ── Status message ────────────────────────────────────
-                    if (_pct >= 0.8) ...[
+                    if (_statusMessage.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: _barColor.withAlpha(15),
+                          color: _statusColor.withAlpha(15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _barColor.withAlpha(40)),
+                          border:
+                              Border.all(color: _statusColor.withAlpha(40)),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('💡', style: const TextStyle(fontSize: 14)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _pct >= 1.0
-                                    ? 'You\'ve exceeded your ${_budget.displayName} budget. Time to review your spending!'
-                                    : 'The budget is getting cozy: $pctLabel% used. Let\'s prioritize the essentials for now.',
-                                style: GoogleFonts.urbanist(
-                                  fontSize: 12,
-                                  color: _barColor,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          _statusMessage,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 12,
+                            color: _statusColor,
+                            height: 1.5,
+                          ),
                         ),
                       ),
                     ],

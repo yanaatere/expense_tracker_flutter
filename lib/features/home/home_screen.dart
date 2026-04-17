@@ -528,7 +528,7 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionButton(icon: Icons.attach_money, label: 'Budgeting', onTap: () {})),
+        Expanded(child: _ActionButton(icon: Icons.attach_money, label: 'Budgeting', onTap: () => context.push('/budget'))),
         const SizedBox(width: 8),
         Expanded(child: _ActionButton(icon: Icons.sync, label: 'Recurring', onTap: () => context.push('/recurring'))),
         const SizedBox(width: 8),
@@ -881,7 +881,7 @@ class _GlassBottomNav extends StatelessWidget {
                   imagePath: 'assets/icons/reports.png',
                   label: 'Report',
                   active: false,
-                  onTap: () {},
+                  onTap: () => context.push('/report'),
                 ),
               ],
             ),

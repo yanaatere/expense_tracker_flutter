@@ -178,29 +178,34 @@ class TransactionFormCubit extends Cubit<TransactionFormState> {
         walletId: walletId,
         receiptImageUrl: state.receiptUrl,
       );
-      if (!isClosed) emit(state.copyWith(submitting: false, submitSuccess: true));
-
-      // Check if this expense exceeded any budget.
+      // Check if this expense exceeded a budget with notifications enabled.
+      // Do this BEFORE emitting success so both fire in one state update.
+      String? budgetWarning;
       if (state.transactionType == 'expense') {
         final catId = state.selectedCategory?['id'] as int?;
         if (catId != null) {
           try {
             final budget = await ServiceLocator.budgetDao.getForCategory(catId);
-            if (budget != null) {
+            if (budget != null && budget.notificationEnabled) {
               final entry = await ServiceLocator.authCacheDao.get();
               if (entry != null) {
                 final spending = await ServiceLocator.budgetDao
                     .getCurrentSpending(budget, entry.userId);
-                if (spending >= budget.monthlyLimit && !isClosed) {
-                  emit(state.copyWith(
-                    budgetWarning:
-                        '⚠️ You\'ve exceeded your ${budget.displayName} budget!',
-                  ));
+                if (spending >= budget.monthlyLimit) {
+                  budgetWarning = budget.displayName;
                 }
               }
             }
           } catch (_) {}
         }
+      }
+
+      if (!isClosed) {
+        emit(state.copyWith(
+          submitting: false,
+          submitSuccess: true,
+          budgetWarning: budgetWarning,
+        ));
       }
     } on DioException catch (e) {
       if (!isClosed) {

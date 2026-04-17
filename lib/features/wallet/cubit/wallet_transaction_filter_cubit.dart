@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/category_definitions.dart';
 import '../../../core/models/wallet.dart';
 import '../../../core/services/wallet_service.dart';
+import '../../../service_locator.dart';
 import 'wallet_transaction_filter_state.dart';
 
 class WalletTransactionFilterCubit extends Cubit<WalletTransactionFilterState> {
   final String transactionType; // 'income' or 'expense'
   int? _walletServerId;
+  String? _walletLocalId; // fallback when not synced
 
   WalletTransactionFilterCubit({required this.transactionType})
       : super(const WalletTransactionFilterState());
@@ -16,7 +18,9 @@ class WalletTransactionFilterCubit extends Cubit<WalletTransactionFilterState> {
     final serverId =
         wallet.serverId != null ? int.tryParse(wallet.serverId!) : null;
     if (serverId == null) {
-      emit(state.copyWith(loading: false, error: 'Wallet not synced yet'));
+      // Not synced yet — load from local SQLite.
+      _walletLocalId = wallet.id;
+      _loadLocal();
       return;
     }
     load(serverId);
@@ -37,8 +41,42 @@ class WalletTransactionFilterCubit extends Cubit<WalletTransactionFilterState> {
     }
   }
 
+  Future<void> _loadLocal() async {
+    emit(state.copyWith(loading: true, clearError: true));
+    try {
+      final entry = await ServiceLocator.authCacheDao.get();
+      final userId = entry?.userId ?? '';
+      final all = await ServiceLocator.expenseDao.getAll(userId);
+      final filtered = all
+          .where((e) =>
+              e.type == transactionType &&
+              e.walletId == _walletLocalId &&
+              !e.isDeleted)
+          .map((e) {
+        final date = DateTime.fromMillisecondsSinceEpoch(e.expenseDate);
+        return <String, dynamic>{
+          'transaction_date': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+          'amount': e.amount,
+          'description': e.title,
+          'category_name': e.category.isNotEmpty ? e.category : null,
+          'category_id': e.categoryId,
+          'sub_category_id': e.subCategoryId,
+          'receipt_image_url': e.receiptImageUrl,
+          'id': e.id,
+        };
+      }).toList();
+      if (!isClosed) emit(state.copyWith(transactions: filtered, loading: false));
+    } catch (_) {
+      if (!isClosed) emit(state.copyWith(error: 'Failed to load', loading: false));
+    }
+  }
+
   Future<void> reload() async {
-    if (_walletServerId != null) await load(_walletServerId!);
+    if (_walletServerId != null) {
+      await load(_walletServerId!);
+    } else if (_walletLocalId != null) {
+      await _loadLocal();
+    }
   }
 
   void setMonthly(bool v) =>

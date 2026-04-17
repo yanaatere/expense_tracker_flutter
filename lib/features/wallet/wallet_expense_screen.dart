@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/widgets/monex_bar_chart.dart';
 import '../../core/constants/category_definitions.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/models/wallet.dart';
@@ -245,6 +246,15 @@ body: SafeArea(
 
                         SizedBox(height: 24),
 
+                        // ── Bar chart ──────────────────────────────────────
+                        _WalletBarChart(
+                          barPoints: state.barData,
+                          monthly: state.monthly,
+                          accentColor: AppColors.expense,
+                        ),
+
+                        SizedBox(height: 24),
+
                         // ── Section header ─────────────────────────────────
                         Row(
                           children: [
@@ -399,6 +409,59 @@ body: SafeArea(
   }
 }
 
+
+// ── Bar chart widget ───────────────────────────────────────────────────────────
+
+class _WalletBarChart extends StatelessWidget {
+  final List<WalletBarPoint> barPoints;
+  final bool monthly;
+  final Color accentColor;
+
+  const _WalletBarChart({
+    required this.barPoints,
+    required this.monthly,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pts = barPoints
+        .map((p) => MonexBarChartPoint(
+              label: p.label,
+              rangeLabel: p.rangeLabel,
+              amount: p.amount,
+            ))
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: context.appColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            monthly ? 'Monthly Overview' : 'Annual Overview',
+            style: GoogleFonts.urbanist(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: context.appColors.labelText,
+            ),
+          ),
+          const SizedBox(height: 12),
+          MonexBarChart(
+            points: pts,
+            accentColor: accentColor,
+            isAnnual: !monthly,
+            height: 180,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Donut chart widget ─────────────────────────────────────────────────────────
 

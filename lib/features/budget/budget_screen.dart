@@ -30,6 +30,86 @@ class BudgetScreen extends StatelessWidget {
   }
 }
 
+void _showFreeLimit(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.lock_rounded,
+                color: AppColors.primary, size: 26),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Budget Limit Reached',
+            style: GoogleFonts.urbanist(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Free users can create up to 3 budgets.\nUpgrade to Premium for unlimited budgets.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.urbanist(
+              fontSize: 13,
+              color: const Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40)),
+                elevation: 0,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.push('/premium');
+              },
+              child: Text(
+                'Upgrade to Premium',
+                style: GoogleFonts.urbanist(
+                    fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _BudgetView extends StatelessWidget {
   const _BudgetView();
 
@@ -64,6 +144,9 @@ class _BudgetView extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Free-tier usage banner ────────────────────────────────────
+            const _FreeLimitBanner(),
 
             // ── Body ─────────────────────────────────────────────────────
             Expanded(
@@ -136,6 +219,12 @@ class _BudgetView extends StatelessWidget {
               PrimaryButton(
                 label: 'Add Budgeting',
                 onPressed: () async {
+                  final isPremium = await LocalStorage.isPremium();
+                  if (!context.mounted) return;
+                  if (!isPremium && state.budgets.length >= 3) {
+                    _showFreeLimit(context);
+                    return;
+                  }
                   await context.push('/budget/add');
                   if (context.mounted) context.read<BudgetCubit>().load();
                 },
@@ -145,6 +234,88 @@ class _BudgetView extends StatelessWidget {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Free-tier usage banner
+// ---------------------------------------------------------------------------
+
+class _FreeLimitBanner extends StatefulWidget {
+  const _FreeLimitBanner();
+
+  @override
+  State<_FreeLimitBanner> createState() => _FreeLimitBannerState();
+}
+
+class _FreeLimitBannerState extends State<_FreeLimitBanner> {
+  bool _isPremium = false;
+
+  @override
+  void initState() {
+    super.initState();
+    LocalStorage.isPremium().then((v) {
+      if (mounted) setState(() => _isPremium = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isPremium) return const SizedBox.shrink();
+
+    return BlocBuilder<BudgetCubit, BudgetState>(
+      builder: (context, state) {
+        final count = state.budgets.length.clamp(0, 3);
+        final isFull = count >= 3;
+        final color = isFull ? AppColors.expense : AppColors.primary;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withAlpha(40)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isFull ? Icons.lock_rounded : Icons.info_outline_rounded,
+                  size: 16,
+                  color: color,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isFull
+                        ? 'Budget limit reached (3/3). Upgrade for unlimited.'
+                        : '$count/3 budgets used on free plan.',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ),
+                if (isFull)
+                  GestureDetector(
+                    onTap: () => context.push('/premium'),
+                    child: Text(
+                      'Upgrade',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

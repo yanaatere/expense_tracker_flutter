@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -36,6 +37,7 @@ class _AddTransactionView extends StatefulWidget {
 
 class _AddTransactionViewState extends State<_AddTransactionView> {
   String _amountStr = '0';
+  DateTime _selectedDate = DateTime.now();
   final _titleController = TextEditingController();
   final _noteController = TextEditingController();
   File? _receiptFile;
@@ -78,6 +80,29 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
         _amountStr = _amountStr.substring(0, _amountStr.length - 1);
       }
     });
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 10),
+      lastDate: now,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Future<void> _showCategoryPicker(TransactionFormState formState) async {
@@ -202,15 +227,27 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
     }
   }
 
-  Future<void> _showSuccessDialog(String type) async {
-    final label = type == 'income' ? 'Income' : 'Expense';
+  Future<void> _showSuccessDialog(String type, {String? budgetWarning}) async {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black26,
-      builder: (_) => _SuccessDialog(label: label),
+      barrierColor: const Color(0xCC0D0B26),
+      builder: (_) => _SuccessDialog(type: type),
     );
+    if (!mounted) return;
+    if (budgetWarning != null) {
+      await _showBudgetExceededSheet(budgetWarning);
+    }
     if (mounted) context.pop();
+  }
+
+  Future<void> _showBudgetExceededSheet(String budgetName) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BudgetExceededSheet(budgetName: budgetName),
+    );
   }
 
   Future<void> _submit(TransactionFormState formState) async {
@@ -230,7 +267,7 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
       amount: _amount,
       description: _titleController.text,
       note: _noteController.text,
-      date: DateTime.now(),
+      date: _selectedDate,
     );
   }
 
@@ -246,26 +283,13 @@ class _AddTransactionViewState extends State<_AddTransactionView> {
     return BlocConsumer<TransactionFormCubit, TransactionFormState>(
       listenWhen: (prev, curr) =>
           curr.submitSuccess != prev.submitSuccess ||
-          curr.submitError != prev.submitError ||
-          curr.budgetWarning != prev.budgetWarning,
+          curr.submitError != prev.submitError,
       listener: (context, state) {
         if (state.submitSuccess) {
-          _showSuccessDialog(state.transactionType);
+          _showSuccessDialog(state.transactionType, budgetWarning: state.budgetWarning);
         } else if (state.submitError != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.submitError!)),
-          );
-        }
-        if (state.budgetWarning != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.budgetWarning!,
-                  style: GoogleFonts.urbanist(
-                      fontWeight: FontWeight.w600, color: Colors.white)),
-              backgroundColor: Colors.orange.shade700,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 4),
-            ),
           );
         }
       },
@@ -573,6 +597,44 @@ body: SafeArea(
                   ),
                 ),
 
+                const SizedBox(height: 10),
+
+                // ── Date picker ──────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GestureDetector(
+                    onTap: _pickDate,
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: context.appColors.cardBg,
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${_selectedDate.day.toString().padLeft(2, '0')}/'
+                              '${_selectedDate.month.toString().padLeft(2, '0')}/'
+                              '${_selectedDate.year}',
+                              style: GoogleFonts.urbanist(
+                                fontSize: 13,
+                                color: context.appColors.labelText,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 16),
 
                 // ── Numpad ───────────────────────────────────────────────
@@ -644,53 +706,364 @@ body: SafeArea(
 // ── Success dialog ────────────────────────────────────────────────────────────
 
 class _SuccessDialog extends StatefulWidget {
-  final String label;
-  const _SuccessDialog({required this.label});
+  final String type; // 'income' | 'expense'
+  const _SuccessDialog({required this.type});
 
   @override
   State<_SuccessDialog> createState() => _SuccessDialogState();
 }
 
-class _SuccessDialogState extends State<_SuccessDialog> {
+class _SuccessDialogState extends State<_SuccessDialog>
+    with TickerProviderStateMixin {
+  late final AnimationController _scaleCtrl;
+  late final AnimationController _checkCtrl;
+  late final AnimationController _textCtrl;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) Navigator.of(context).pop();
-    });
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _checkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _textCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _runSequence();
+  }
+
+  Future<void> _runSequence() async {
+    await _scaleCtrl.forward();
+    await _checkCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 100));
+    await _textCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 1600));
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    _checkCtrl.dispose();
+    _textCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isIncome = widget.type == 'income';
+    final accentColor =
+        isIncome ? const Color(0xFF5AC45A) : AppColors.expense;
+    final label = isIncome ? 'Income Added!' : 'Expense Added!';
+    final subtitle = isIncome
+        ? 'Your income has been recorded.'
+        : 'Your expense has been recorded.';
+
+    final scaleAnim = CurvedAnimation(
+      parent: _scaleCtrl,
+      curve: Curves.elasticOut,
+    );
+    final textFade = CurvedAnimation(parent: _textCtrl, curve: Curves.easeIn);
+
     return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFF5AC45A),
-                borderRadius: BorderRadius.circular(16),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+      child: ScaleTransition(
+        scale: scaleAnim,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(32, 36, 32, 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 48,
+                offset: Offset(0, 16),
               ),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
-            ),
-            SizedBox(height: 20),
-            Text(
-              '${widget.label} transactions\nhave been added',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.urbanist(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: context.appColors.labelText,
-                height: 1.5,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animated checkmark
+              SizedBox(
+                width: 88,
+                height: 88,
+                child: AnimatedBuilder(
+                  animation: _checkCtrl,
+                  builder: (_, child) => CustomPaint(
+                    painter: _TxCheckmarkPainter(
+                      progress: _checkCtrl.value,
+                      color: accentColor,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+
+              // Text fades in
+              FadeTransition(
+                opacity: textFade,
+                child: Column(
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 13,
+                        color: const Color(0xFF6B7280),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Colored status pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: accentColor.withAlpha(18),
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isIncome
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
+                            size: 15,
+                            color: accentColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isIncome ? 'Transaction saved' : 'Transaction saved',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: accentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Animated checkmark painter ─────────────────────────────────────────────────
+
+class _TxCheckmarkPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _TxCheckmarkPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Faint filled background
+    canvas.drawCircle(center, radius, Paint()..color = color.withAlpha(20));
+
+    // Arc stroke sweeps from top (first 60% of progress)
+    final circlePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    final sweepProgress = (progress / 0.6).clamp(0.0, 1.0);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - 2),
+      -math.pi / 2,
+      2 * math.pi * sweepProgress,
+      false,
+      circlePaint,
+    );
+
+    // Checkmark draws after arc is 60% done
+    if (progress > 0.6) {
+      _drawCheck(canvas, center, radius, ((progress - 0.6) / 0.4).clamp(0.0, 1.0));
+    }
+  }
+
+  void _drawCheck(Canvas canvas, Offset c, double r, double p) {
+    final p1 = Offset(c.dx - r * 0.28, c.dy + r * 0.02);
+    final p2 = Offset(c.dx - r * 0.04, c.dy + r * 0.26);
+    final p3 = Offset(c.dx + r * 0.32, c.dy - r * 0.22);
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final seg1 = (p2 - p1).distance;
+    final seg2 = (p3 - p2).distance;
+    final total = seg1 + seg2;
+    final drawn = total * p;
+
+    final path = Path();
+    if (drawn <= seg1) {
+      final t = drawn / seg1;
+      path.moveTo(p1.dx, p1.dy);
+      path.lineTo(p1.dx + (p2.dx - p1.dx) * t, p1.dy + (p2.dy - p1.dy) * t);
+    } else {
+      final t = (drawn - seg1) / seg2;
+      path.moveTo(p1.dx, p1.dy);
+      path.lineTo(p2.dx, p2.dy);
+      path.lineTo(p2.dx + (p3.dx - p2.dx) * t, p2.dy + (p3.dy - p2.dy) * t);
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_TxCheckmarkPainter old) => old.progress != progress;
+}
+
+// ── Budget exceeded bottom sheet ──────────────────────────────────────────────
+
+class _BudgetExceededSheet extends StatefulWidget {
+  final String budgetName;
+  const _BudgetExceededSheet({required this.budgetName});
+
+  @override
+  State<_BudgetExceededSheet> createState() => _BudgetExceededSheetState();
+}
+
+class _BudgetExceededSheetState extends State<_BudgetExceededSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _fade = CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.5));
+    _slide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, 12)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animated warning icon
+              ScaleTransition(
+                scale: _scale,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withAlpha(18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_active_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 34,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Budget Limit Exceeded!',
+                style: GoogleFonts.urbanist(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your spending on "${widget.budgetName}" has exceeded the budget limit you set. Consider reviewing your expenses.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.urbanist(
+                  fontSize: 13,
+                  color: const Color(0xFF6B7280),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Got it',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
